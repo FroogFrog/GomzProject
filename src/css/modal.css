@@ -1,0 +1,61 @@
+.modal-overlay {
+    display: flex; /* Use flexbox to center the modal */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Dim background */
+}
+
+.modal-content {
+    background-color: #fff;
+    padding: 20px;
+    border: 1px solid #888;
+    border-radius: 8px; /* Optional: rounded corners */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Optional: add shadow */
+    max-width: 90%; /* Maximum width of the modal */
+    max-height: 90%; /* Maximum height of the modal */
+    overflow: auto; /* Allow scrolling if content exceeds modal size */
+}
+
+.modal-overlay .modal-content table {
+    width: 100%; /* Make the table take the full width */
+    border-collapse: collapse; /* Merge borders of table cells */
+    margin-top: 10px; /* Space above the table */
+}
+
+.modal-overlay .modal-content th, td {
+    padding: 12px 15px; /* Add padding for better spacing */
+    text-align: center; /* Align text to the left */
+    border: 1px solid #ddd; /* Add border to table cells */
+}
+
+.modal-overlay .modal-content th {
+    background-color: #f2f2f2; /* Light gray background for header */
+    font-weight: bold; /* Bold header text */
+}
+
+.modal-overlay .modal-content tr:nth-child(even) {
+    background-color: #f9f9f9; /* Light background for even rows */
+}
+
+.modal-overlay .modal-content tr:hover {
+    background-color: #f1f1f1; /* Highlight row on hover */
+}
+
+.modal-overlay .modal-content button {
+    margin-top: 20px; /* Space above the button */
+    padding: 10px 15px; /* Add padding for better spacing */
+    background-color: #007bff; /* Button background color */
+    color: white; /* Button text color */
+    border: none; /* Remove default border */
+    border-radius: 5px; /* Optional: rounded corners for button */
+    cursor: pointer; /* Change cursor to pointer on hover */
+}
+
+.modal-overlay .modal-content button:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+}

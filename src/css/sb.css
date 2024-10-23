@@ -1,0 +1,232 @@
+/* Resetting some default styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+}
+
+/* Navbar styles */
+.navbar {
+    background-color: #333;
+    color: #fff;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.navbar-logo {
+    font-size: 24px;
+}
+
+.navbar-menu {
+    list-style-type: none;
+    display: flex;
+}
+
+.navbar-menu li {
+    margin-right: 20px;
+}
+
+.navbar-menu li a {
+    text-decoration: none;
+    color: #fff;
+}
+
+/* Sidebar styles */
+.sidebar {
+    background-color: #555;
+    color: #fff;
+    width: 200px;
+    padding: 20px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+}
+
+.sidebar-menu {
+    list-style-type: none;
+}
+
+.sidebar-menu li {
+    margin-bottom: 10px;
+}
+
+.sidebar-menu li a {
+    text-decoration: none;
+    color: #fff;
+}
+
+/* Content styles */
+.content {
+    margin-left: 220px; /* Adjust according to sidebar width */
+    padding: 20px;
+}
+
+/* Sidebar link animation */
+.sidebar-menu li a {
+    text-decoration: none;
+    color: #fff;
+    position: relative;
+}
+
+.sidebar-menu li a::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    bottom: 0;
+    left: 0;
+    background-color: #fff;
+    visibility: hidden;
+    transform: scaleX(0);
+    transition: all 0.3s ease-in-out;
+}
+
+.sidebar-menu li a:hover::before {
+    visibility: visible;
+    transform: scaleX(1);
+}
+
+
+
+/* .table-container {
+    margin: 20px auto;
+    width: 80%;
+}
+
+.table-container table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table-container th, .table-container td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+.table-container th {
+    background-color: #f2f2f2;
+}
+
+.table-container tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+} */
+.table-container {
+    background-color: #fff; /* White background */
+    padding: 20px; /* Space inside the container */
+    margin-bottom: 20px; /* Space between containers */
+    border-radius: 8px; /* Rounded corners */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Shadow for a box-like appearance */
+    border: 1px solid #ddd; /* Light border */
+}
+
+.table-container h2 {
+    margin-bottom: 15px; /* Space between the heading and the table */
+}
+
+table {
+    width: 100%; /* Full width */
+    border-collapse: collapse; /* Remove space between cells */
+}
+
+table th, table td {
+    padding: 12px; /* Space inside table cells */
+    text-align: left; /* Align text to the left */
+    border-bottom: 1px solid #ddd; /* Border under each row */
+}
+
+table th {
+    background-color: #f4f4f4; /* Light grey background for headers */
+    font-weight: bold; /* Bold text for headers */
+}
+.btn-create {
+    background-color: #4CAF50; /* Green */
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 8px;
+  }
+  
+  /* Styling the button on hover */
+  .btn-create:hover {
+    background-color: #45a049;
+  }
+  h2{
+    text-align: center;
+    color: #4CAF50;
+  }
+
+  /* Styling for search input */
+.search-input {
+    width: 300px; /* Adjust the width as needed */
+    padding: 10px; /* Padding inside the input */
+    margin-left: 20px;
+    border: 1px solid #ccc; /* Light grey border */
+    border-radius: 5px; /* Rounded corners */
+    font-size: 16px; /* Font size */
+    outline: none; /* Remove outline on focus */
+    transition: border-color 0.3s ease-in-out; /* Smooth transition for border color */
+}
+
+.search-input:focus {
+    border-color: #66afe9; /* Change border color on focus */
+    box-shadow: 0 0 5px rgba(102, 175, 233, 0.5); /* Add shadow on focus */
+}
+
+
+
+form {
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    background-color: #f9f9f9;
+}
+
+form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #333;
+}
+
+form input[type="text"],
+form input[type="number"] {
+    width: calc(100% - 22px); /* Subtracting padding */
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+form input[type="submit"] {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background: #28a745;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+form input[type="submit"]:hover {
+    background: #218838;
+}
