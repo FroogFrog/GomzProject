@@ -1013,6 +1013,67 @@ app.get('/api/combined-data/:itemId', (req, res) => {
 
 
 
+//sales admin
+//order
+// Fetch all orders
+app.get('/api/orders', (req, res) => {
+    const query = `
+        SELECT 
+            o.orderId, 
+            o.quantity, 
+            o.customerName, 
+            o.date, 
+            o.location, 
+            o.modeOfPayment, 
+            o.paymentStatus, 
+            o.status, 
+            o.price,
+            i.itemName
+        FROM 
+            tblorders o
+        JOIN 
+            tblItems i ON o.itemId = i.itemId
+    `;
+
+    db.query(query, (error, results) => {
+        if (error) {
+            return res.status(500).json({ error: 'Database query failed' });
+        }
+        res.json(results);
+    });
+});
+
+// Fetch items for the dropdown
+app.get('/api/items', (req, res) => {
+    const query = 'SELECT itemId, itemName FROM tblItems'; // Adjust the table name as needed
+    db.query(query, (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: 'Error fetching items' });
+        }
+        res.json(results);
+    });
+});
+
+// Route to add a new order
+app.post('/api/orders', (req, res) => {
+    const { itemId, customerName, date, location, modeOfPayment, paymentStatus, price } = req.body;
+
+    // SQL query to insert a new order
+    const query = 'INSERT INTO tblorders (itemId, customerName, date, location, modeOfPayment, status, paymentStatus, price) VALUES (?, ?, ?, ?, ?, "preparing", ?, ?)';
+    db.query(query, [itemId, customerName, date, location, modeOfPayment, paymentStatus, price], (error, results) => {
+        if (error) {
+            console.error('Error adding order:', error);
+            return res.status(500).json({ error: 'An error occurred while adding the order.' });
+        }
+        res.status(201).json({ message: 'Order added successfully', orderId: results.insertId });
+    });
+});
+
+
+
+
+
+
 
 
 
@@ -1020,6 +1081,3 @@ app.get('/api/combined-data/:itemId', (req, res) => {
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
-
-
-//eme

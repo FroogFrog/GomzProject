@@ -25,6 +25,8 @@ import DataAdminProduction from './DataAdmin/Production';
 
 import SalesAdmin from './login/SalesAdmin';
 import SalesAdminDashboard from './SalesAdmin/Dashboard';
+import SalesAdminOrder from './SalesAdmin/Order';
+
 
 
 
@@ -85,6 +87,8 @@ function App() {
 
           <Route path="/sales-admin" element={<SalesAdmin />} />
           <Route path="/sales-admin/dashboard" element={<SalesAdminDashboard />} />
+          <Route path="/sales-admin/order" element={<SalesAdminOrder />} />
+          
 
 
           <Route path="/dashboard" element={<Dashboard />} />

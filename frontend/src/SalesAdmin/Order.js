@@ -4,7 +4,7 @@ import Header from '../BG/SalesAdminHeader';
 import Sidebar from '../BG/SalesAdminSidebar';
 import axios from 'axios';
 import moment from "moment";
-import AddItemModal from './AddItemModal'; // Adjust the import based on your file structure
+import AddOrderModal from './AddOrderModal'; // Adjust the import based on your file structure
 
 function Order() {
     const [orders, setOrders] = useState([]);
@@ -41,18 +41,39 @@ function Order() {
                 <div className="page-title">Orders</div>
                 <div className="info">
                     <div className="above-table">
-                        <button className="btn" onClick={() => setAddModalOpen(true)}>
-                            <i className="fa-solid fa-add"></i> Add
-                        </button>
-                        <button className="btn" id="sortButton">
-                            <i className="fa-solid fa-sort"></i> Sort
-                        </button>
+                        <div className="above-table-wrapper">
+                            <button className="btn" onClick={() => setAddModalOpen(true)}>
+                                <i className="fa-solid fa-add"></i> Add
+                            </button>
+                            <button className="btn" id="sortButton">
+                                <i className="fa-solid fa-sort"></i> Sort
+                            </button>
+                        </div>
+                        <div className="search-container">
+                            <div className="search-wrapper">
+                                <label>
+                                    <i className="fa-solid fa-magnifying-glass search-icon"></i>
+                                </label>
+                                <input
+                                    type="text"
+                                    className="search-input"
+                                    placeholder="Search..."
+                                    size="40"
+                                />
+                            </div>
+                            <div>
+                                <button id="searchButton" className="btn">Search</button>
+                            </div>
+                        </div>
                     </div>
+                    
                     <div className="t-head">
                         <table className="table-head">
                             <thead>
                                 <tr>
                                     <th>#</th>
+                                    <th>Item Name</th>
+                                    <th>Quantity</th>
                                     <th>Customer</th>
                                     <th>Order Date</th>
                                     <th>Location</th>
@@ -71,13 +92,15 @@ function Order() {
                                 {orders.map((order, index) => (
                                     <tr key={order.orderId}>
                                         <td>{index + 1}</td>
+                                        <td>{order.itemName}</td>
+                                        <td>{order.quantity}</td>
                                         <td>{order.customerName}</td>
                                         <td>{moment(order.date).format("MM-DD-YYYY")}</td>
                                         <td>{order.location}</td>
                                         <td>{order.modeOfPayment}</td>
                                         <td>{order.paymentStatus}</td>
                                         <td>{order.status}</td>
-                                        <td>${order.price.toFixed(2)}</td>
+                                        <td>${order.price}</td>
                                         <td>
                                             <button className="btn" onClick={() => console.log('View Order')}>
                                                 <i className="fa-solid fa-eye"></i>
@@ -93,7 +116,7 @@ function Order() {
                     </div>
                 </div>
             </div>
-            <AddItemModal 
+            <AddOrderModal 
                 isOpen={isAddModalOpen} 
                 onClose={() => setAddModalOpen(false)} 
                 onAdd={handleAddOrder} 
