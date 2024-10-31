@@ -2,35 +2,46 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import '../css/AddItemModal.css';
 
-const AddOrderModal = ({ isOpen, onClose, onAdd }) => {
+const EditOrderModal = ({ isOpen, onClose, order, onUpdate }) => {
     const [customerName, setCustomerName] = useState('');
     const [date, setDate] = useState('');
     const [location, setLocation] = useState('');
     const [modeOfPayment, setModeOfPayment] = useState('');
     const [paymentStatus, setPaymentStatus] = useState('');
     const [price, setPrice] = useState('');
-    const [quantity, setQuantity] = useState(''); // New state for quantity
-    const [items, setItems] = useState([]); 
+    const [quantity, setQuantity] = useState('');
+    const [items, setItems] = useState([]);
     const [selectedItemId, setSelectedItemId] = useState('');
 
     useEffect(() => {
-        const fetchItems = async () => {
-            try {
-                const response = await axios.get('http://localhost:5000/api/items');
-                setItems(response.data);
-            } catch (error) {
-                console.error('Error fetching items:', error);
-            }
-        };
+        if (order) {
+            setSelectedItemId(order.itemId);
+            setCustomerName(order.customerName);
+            setDate(order.date);
+            setLocation(order.location);
+            setModeOfPayment(order.modeOfPayment);
+            setPaymentStatus(order.paymentStatus);
+            setPrice(order.price);
+            setQuantity(order.quantity);
+        }
+    }, [order]);
 
-        fetchItems();
-    }, []);
+    useEffect(() => {
+        if (isOpen) {
+            axios.get('http://localhost:5000/api/items')
+                .then(response => {
+                    setItems(response.data);
+                })
+                .catch(error => {
+                    console.error('Error fetching items:', error);
+                });
+        }
+    }, [isOpen]);
 
-    if (!isOpen) return null;
-
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        const newOrder = { 
+        const updatedOrder = { 
+            ...order, 
             itemId: selectedItemId,
             customerName,
             date,
@@ -38,16 +49,18 @@ const AddOrderModal = ({ isOpen, onClose, onAdd }) => {
             modeOfPayment,
             paymentStatus,
             price,
-            quantity // Include quantity in the order data
+            quantity
         };
-        await onAdd(newOrder); 
-        onClose(); 
+        onUpdate(updatedOrder);
+        onClose();
     };
 
+    if (!isOpen) return null;
+
     return (
-        <div id="addModal" className="modal-overlay">
+        <div className="modal-overlay">
             <div className="modal-content">
-                <h2>Add New Order</h2>
+                <h2>Edit Order</h2>
                 <form onSubmit={handleSubmit}>
                     <select 
                         value={selectedItemId} 
@@ -111,7 +124,7 @@ const AddOrderModal = ({ isOpen, onClose, onAdd }) => {
                         onChange={(e) => setQuantity(e.target.value)}
                         required
                     />
-                    <button type="submit">Add Order</button>
+                    <button type="submit">Update Order</button>
                     <button type="button" onClick={onClose}>Cancel</button>
                 </form>
             </div>
@@ -119,4 +132,4 @@ const AddOrderModal = ({ isOpen, onClose, onAdd }) => {
     );
 };
 
-export default AddOrderModal;
+export default EditOrderModal;

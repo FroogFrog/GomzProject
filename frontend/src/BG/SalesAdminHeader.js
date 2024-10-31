@@ -45,7 +45,7 @@ function Header() {
     <div className="header">
       <div>Welcome back,<span className="username"> Username!</span></div>
       <div className="dropdown">
-        <span className="role">Data Admin</span>
+        <span className="role">Sales Admin</span>
 
         {/* Notification Button */}
         <button

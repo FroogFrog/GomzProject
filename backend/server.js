@@ -1054,13 +1054,13 @@ app.get('/api/items', (req, res) => {
     });
 });
 
-// Route to add a new order
+/// Route to add a new order
 app.post('/api/orders', (req, res) => {
-    const { itemId, customerName, date, location, modeOfPayment, paymentStatus, price } = req.body;
+    const { itemId, customerName, date, location, modeOfPayment, paymentStatus, price, quantity } = req.body;
 
-    // SQL query to insert a new order
-    const query = 'INSERT INTO tblorders (itemId, customerName, date, location, modeOfPayment, status, paymentStatus, price) VALUES (?, ?, ?, ?, ?, "preparing", ?, ?)';
-    db.query(query, [itemId, customerName, date, location, modeOfPayment, paymentStatus, price], (error, results) => {
+    // SQL query to insert a new order with quantity
+    const query = 'INSERT INTO tblorders (itemId, customerName, date, location, modeOfPayment, status, paymentStatus, price, quantity) VALUES (?, ?, ?, ?, ?, "preparing", ?, ?, ?)';
+    db.query(query, [itemId, customerName, date, location, modeOfPayment, paymentStatus, price, quantity], (error, results) => {
         if (error) {
             console.error('Error adding order:', error);
             return res.status(500).json({ error: 'An error occurred while adding the order.' });
@@ -1069,6 +1069,18 @@ app.post('/api/orders', (req, res) => {
     });
 });
 
+// Delete an order
+app.delete('/api/orders/:id', (req, res) => {
+    const orderId = req.params.id;
+    const query = 'DELETE FROM tblorders WHERE orderId = ?';
+    db.query(query, [orderId], (err, result) => {
+        if (err) {
+            console.error('Error deleting order:', err);
+            return res.status(500).json({ error: 'Database error' });
+        }
+        res.json({ message: 'Order deleted successfully' });
+    });
+});
 
 
 
