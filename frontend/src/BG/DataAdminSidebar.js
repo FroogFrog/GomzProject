@@ -16,6 +16,7 @@ const Sidebar = () => {
         <li><Link to="/data-admin/supplier"><FontAwesomeIcon icon={faUserTie} /> Supplier</Link></li>
         <li><Link to="/data-admin/supply-delivery"><FontAwesomeIcon icon={faTruck} /> Supply Delivery</Link></li>
         <li><Link to="/data-admin/production"><FontAwesomeIcon icon={faIndustry} /> Production</Link></li>
+        <li><Link to="/data-admin/productionmateriallogs"><FontAwesomeIcon icon={faIndustry} /> Production Materials Logs</Link></li>
       </ul>
     </div>
   );

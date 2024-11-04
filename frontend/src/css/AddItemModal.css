@@ -108,3 +108,7 @@ tr:hover {
         max-height: 90%;
     }
 }
+
+.price-display, .total-display {
+    margin: 10px 0;
+}

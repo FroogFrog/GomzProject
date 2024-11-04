@@ -1045,7 +1045,7 @@ app.get('/api/orders', (req, res) => {
 
 // Fetch items for the dropdown
 app.get('/api/items', (req, res) => {
-    const query = 'SELECT itemId, itemName FROM tblItems'; // Adjust the table name as needed
+    const query = 'SELECT itemId, itemName, price FROM tblItems'; // Adjust the table name as needed
     db.query(query, (err, results) => {
         if (err) {
             return res.status(500).json({ error: 'Error fetching items' });
@@ -1069,6 +1069,106 @@ app.post('/api/orders', (req, res) => {
     });
 });
 
+// Route to update an existing order
+app.put('/api/orders/:orderId', (req, res) => {
+    const { orderId } = req.params;
+    const { itemId, customerName, date, location, modeOfPayment, paymentStatus, price, quantity, status } = req.body;
+
+    // SQL query to update an order with the provided details
+    const query = `
+        UPDATE tblorders 
+        SET itemId = ?, customerName = ?, date = ?, location = ?, modeOfPayment = ?, 
+            paymentStatus = ?, price = ?, quantity = ?, status = ?
+        WHERE orderId = ?`;
+
+    db.query(query, [itemId, customerName, date, location, modeOfPayment, paymentStatus, price, quantity, status, orderId], (error, results) => {
+        if (error) {
+            console.error('Error updating order:', error);
+            return res.status(500).json({ error: 'An error occurred while updating the order.' });
+        }
+        
+        if (results.affectedRows === 0) {
+            return res.status(404).json({ error: 'Order not found.' });
+        }
+
+        res.json({ message: 'Order updated successfully' });
+    });
+});
+
+app.get('/api/preparingOrders', async (req, res) => {
+    try {
+        // Base query to select orders with status 'preparing'
+        const query = 'SELECT * FROM tblorders WHERE status = "preparing"';
+        
+        db.query(query, (err, results) => {
+            if (err) {
+                console.error('Error fetching orders:', err);
+                return res.status(500).json({ error: 'Error fetching orders' }); // Changed message to match
+            }
+            res.json(results); // Send the results as JSON
+        });
+    } catch (error) {
+        console.error('Error fetching orders:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+app.get('/api/deliveryOrders', async (req, res) => {
+    try {
+        // Base query to select orders with status 'on delivery'
+        const query = 'SELECT * FROM tblorders WHERE status = "on delivery"';
+        
+        db.query(query, (err, results) => {
+            if (err) {
+                console.error('Error fetching orders:', err);
+                return res.status(500).json({ error: 'Error fetching orders' }); // Changed message to match
+            }
+            res.json(results); // Send the results as JSON
+        });
+    } catch (error) {
+        console.error('Error fetching orders:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+app.get('/api/sales', async (req, res) => {
+    try {
+        // Base query to select orders with status 'delivered'
+        const query = 'SELECT * FROM tblorders WHERE status = "delivered"';
+        
+        db.query(query, (err, results) => {
+            if (err) {
+                console.error('Error fetching orders:', err);
+                return res.status(500).json({ error: 'Error fetching orders' }); // Changed message to match
+            }
+            res.json(results); // Send the results as JSON
+        });
+    } catch (error) {
+        console.error('Error fetching orders:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+app.get('/api/cancelled', async (req, res) => {
+    try {
+        // Base query to select orders with status 'cancelled'
+        const query = 'SELECT * FROM tblorders WHERE status = "cancelled"';
+        
+        db.query(query, (err, results) => {
+            if (err) {
+                console.error('Error fetching orders:', err);
+                return res.status(500).json({ error: 'Error fetching orders' }); // Changed message to match
+            }
+            res.json(results); // Send the results as JSON
+        });
+    } catch (error) {
+        console.error('Error fetching orders:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+
+
 // Delete an order
 app.delete('/api/orders/:id', (req, res) => {
     const orderId = req.params.id;
@@ -1083,7 +1183,30 @@ app.delete('/api/orders/:id', (req, res) => {
 });
 
 
+//production mats logs
+// Fetch all production material logs
+app.get('/api/production-material-logs', (req, res) => {
+    const query = `
+        SELECT 
+            logs.logId, 
+            logs.quantityUsed, 
+            logs.dateLogged, 
+            logs.description, 
+            mats.matName
+        FROM 
+            tblProductionMaterialLogs logs
+        JOIN 
+            tblRawMats mats ON logs.matId = mats.matId
+    `;
 
+    db.query(query, (error, results) => {
+        if (error) {
+            console.error('Database query error:', error);  // Log the error to the console
+            return res.status(500).json({ error: 'Database query failed' });
+        }
+        res.json(results);
+    });
+});
 
 
 

@@ -4,38 +4,38 @@ import Header from '../BG/SalesAdminHeader';
 import Sidebar from '../BG/SalesAdminSidebar';
 import axios from 'axios';
 import moment from "moment";
-import AddOrderModal from './AddOrderModal';
 import EditOrderModal from './EditOrderModal';
 
-function Order() {
+function Cancelled() {
     const [orders, setOrders] = useState([]);
-    const [isAddModalOpen, setAddModalOpen] = useState(false);
+    const [items, setItems] = useState([]); // New state to hold items
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
 
     // Fetch orders from the backend
-    const fetchOrders = async () => {
+    const fetchOrdersByStatus = async () => {
         try {
-            const response = await axios.get('http://localhost:5000/api/orders');
-            setOrders(response.data);
+            const response = await axios.get(`http://localhost:5000/api/cancelled`);
+            setOrders(response.data); // Use response.data directly
         } catch (error) {
             console.error('Error fetching orders:', error);
         }
     };
 
-    useEffect(() => {
-        fetchOrders();
-    }, []);
-
-    const handleAddOrder = async (newOrder) => {
+    // Fetch items from the backend
+    const fetchItems = async () => {
         try {
-            const response = await axios.post('http://localhost:5000/api/orders', newOrder);
-            setOrders((prevOrders) => [...prevOrders, response.data]);
-            fetchOrders();
+            const response = await axios.get(`http://localhost:5000/api/items`);
+            setItems(response.data); // Use response.data directly
         } catch (error) {
-            console.error('Error adding order:', error);
+            console.error('Error fetching items:', error);
         }
     };
+
+    useEffect(() => {
+        fetchOrdersByStatus();
+        fetchItems(); // Fetch items on component mount
+    }, []);
 
     const handleEditOrder = (order) => {
         setSelectedOrder(order);
@@ -51,21 +51,16 @@ function Order() {
                 )
             );
             setEditModalOpen(false);
-            fetchOrders();
+            fetchOrdersByStatus();
         } catch (error) {
             console.error('Error updating order:', error);
         }
     };
 
-    const handleDeleteOrder = async (orderId) => {
-        if (window.confirm("Are you sure you want to delete this order?")) {
-            try {
-                await axios.delete(`http://localhost:5000/api/orders/${orderId}`);
-                setOrders((prevOrders) => prevOrders.filter((order) => order.orderId !== orderId));
-            } catch (error) {
-                console.error('Error deleting order:', error);
-            }
-        }
+    // Function to get item name by itemId
+    const getItemNameById = (itemId) => {
+        const item = items.find((item) => item.itemId === itemId);
+        return item ? item.itemName : 'Unknown Item'; // Return a default value if not found
     };
 
     return (
@@ -73,35 +68,8 @@ function Order() {
             <Sidebar />
             <Header />
             <div className='main-content'>
-                <div className="page-title">Orders</div>
+                <div className="page-title">Preparing Orders</div>
                 <div className="info">
-                    <div className="above-table">
-                        <div className="above-table-wrapper">
-                            <button className="btn" onClick={() => setAddModalOpen(true)}>
-                                <i className="fa-solid fa-add"></i> Add
-                            </button>
-                            <button className="btn" id="sortButton">
-                                <i className="fa-solid fa-sort"></i> Sort
-                            </button>
-                        </div>
-                        <div className="search-container">
-                            <div className="search-wrapper">
-                                <label>
-                                    <i className="fa-solid fa-magnifying-glass search-icon"></i>
-                                </label>
-                                <input
-                                    type="text"
-                                    className="search-input"
-                                    placeholder="Search..."
-                                    size="40"
-                                />
-                            </div>
-                            <div>
-                                <button id="searchButton" className="btn">Search</button>
-                            </div>
-                        </div>
-                    </div>
-                    
                     <div className="t-head">
                         <table className="table-head">
                             <thead>
@@ -133,29 +101,21 @@ function Order() {
                                         <td>{order.modeOfPayment}</td>
                                         <td>{order.paymentStatus}</td>
                                         <td>{order.status}</td>
-                                        <td>{order.itemName}</td>
+                                        <td>{getItemNameById(order.itemId)}</td> {/* Get item name */}
                                         <td>{order.quantity}</td>
                                         <td>₱{order.price}</td>
                                         <td>
-                                            <button className="btn" onClick={() => handleEditOrder(order)}>
-                                                <i className="fa-solid fa-edit"></i>
-                                            </button>
-                                            <button className="btn" onClick={() => handleDeleteOrder(order.orderId)}>
-                                                <i className="fa-solid fa-trash-can"></i>
+                                            <button className="btn">
+                                                <i className="fa-solid fa-check"></i>
                                             </button>
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
-                        </table>     
+                        </table>
                     </div>
                 </div>
             </div>
-            <AddOrderModal 
-                isOpen={isAddModalOpen} 
-                onClose={() => setAddModalOpen(false)} 
-                onAdd={handleAddOrder} 
-            />
             {isEditModalOpen && (
                 <EditOrderModal
                     isOpen={isEditModalOpen}
@@ -168,4 +128,4 @@ function Order() {
     );
 }
 
-export default Order;
+export default Cancelled;

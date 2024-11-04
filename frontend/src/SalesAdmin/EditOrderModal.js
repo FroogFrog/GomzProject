@@ -4,27 +4,27 @@ import '../css/AddItemModal.css';
 
 const EditOrderModal = ({ isOpen, onClose, order, onUpdate }) => {
     const [customerName, setCustomerName] = useState('');
-    const [date, setDate] = useState('');
     const [location, setLocation] = useState('');
     const [modeOfPayment, setModeOfPayment] = useState('');
     const [paymentStatus, setPaymentStatus] = useState('');
-    const [price, setPrice] = useState('');
     const [quantity, setQuantity] = useState('');
     const [items, setItems] = useState([]);
     const [selectedItemId, setSelectedItemId] = useState('');
+    const [selectedItemPrice, setSelectedItemPrice] = useState(0); // Price of selected item
+    const [total, setTotal] = useState(0); // State for total price
 
     useEffect(() => {
-        if (order) {
+        if (isOpen && order) {
             setSelectedItemId(order.itemId);
             setCustomerName(order.customerName);
-            setDate(order.date);
             setLocation(order.location);
             setModeOfPayment(order.modeOfPayment);
             setPaymentStatus(order.paymentStatus);
-            setPrice(order.price);
             setQuantity(order.quantity);
+            setSelectedItemPrice(order.price); // Set initial price
+            setTotal(order.price * order.quantity); // Calculate initial total
         }
-    }, [order]);
+    }, [order, isOpen]);
 
     useEffect(() => {
         if (isOpen) {
@@ -38,20 +38,37 @@ const EditOrderModal = ({ isOpen, onClose, order, onUpdate }) => {
         }
     }, [isOpen]);
 
+    // Update the price and total when the selected item changes
+    useEffect(() => {
+        const selectedItem = items.find(item => item.itemId === selectedItemId);
+        if (selectedItem) {
+            setSelectedItemPrice(selectedItem.price);
+            setTotal(quantity ? selectedItem.price * quantity : 0);
+        }
+    }, [selectedItemId, items, quantity]);
+
     const handleSubmit = (e) => {
         e.preventDefault();
         const updatedOrder = { 
-            ...order, 
             itemId: selectedItemId,
             customerName,
-            date,
+            date: new Date().toISOString().split('T')[0], // Use the automatically set date
             location,
             modeOfPayment,
             paymentStatus,
-            price,
+            price: selectedItemPrice,
             quantity
         };
         onUpdate(updatedOrder);
+        // Reset all values after updating
+        setCustomerName('');
+        setLocation('');
+        setModeOfPayment('');
+        setPaymentStatus('');
+        setQuantity('');
+        setSelectedItemId('');
+        setTotal(0);
+        setSelectedItemPrice(0);
         onClose();
     };
 
@@ -62,29 +79,12 @@ const EditOrderModal = ({ isOpen, onClose, order, onUpdate }) => {
             <div className="modal-content">
                 <h2>Edit Order</h2>
                 <form onSubmit={handleSubmit}>
-                    <select 
-                        value={selectedItemId} 
-                        onChange={(e) => setSelectedItemId(e.target.value)} 
-                        required
-                    >
-                        <option value="" disabled>Select Item</option>
-                        {items.map(item => (
-                            <option key={item.itemId} value={item.itemId}>
-                                {item.itemName}
-                            </option>
-                        ))}
-                    </select>
+                    
                     <input
                         type="text"
                         placeholder="Customer Name"
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
-                        required
-                    />
-                    <input
-                        type="date"
-                        value={date}
-                        onChange={(e) => setDate(e.target.value)}
                         required
                     />
                     <input
@@ -110,13 +110,15 @@ const EditOrderModal = ({ isOpen, onClose, order, onUpdate }) => {
                         <option value="Paid">Paid</option>
                         <option value="Not Paid">Unpaid</option>
                     </select>
-                    <input
-                        type="number"
-                        placeholder="Price"
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        required
-                    />
+                    
+                    {/* Display item name as plain text */}
+                    <div className="item-name-display">
+                        <strong>Item Name:</strong> {order.itemName || 'N/A'}
+                    </div>
+                    {/* Display the price of the selected item */}
+                    <div className="price-display">
+                        <strong>Price per Unit:</strong> ₱{selectedItemPrice.toFixed(2)}
+                    </div>
                     <input
                         type="number"
                         placeholder="Quantity"
@@ -124,6 +126,10 @@ const EditOrderModal = ({ isOpen, onClose, order, onUpdate }) => {
                         onChange={(e) => setQuantity(e.target.value)}
                         required
                     />
+                    {/* Display the calculated total */}
+                    <div className="total-display">
+                        <strong>Total:</strong> ₱{total.toFixed(2)}
+                    </div>
                     <button type="submit">Update Order</button>
                     <button type="button" onClick={onClose}>Cancel</button>
                 </form>

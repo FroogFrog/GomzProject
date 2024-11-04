@@ -4,14 +4,15 @@ import '../css/AddItemModal.css';
 
 const AddOrderModal = ({ isOpen, onClose, onAdd }) => {
     const [customerName, setCustomerName] = useState('');
-    const [date, setDate] = useState('');
     const [location, setLocation] = useState('');
     const [modeOfPayment, setModeOfPayment] = useState('');
     const [paymentStatus, setPaymentStatus] = useState('');
-    const [price, setPrice] = useState('');
-    const [quantity, setQuantity] = useState(''); // New state for quantity
-    const [items, setItems] = useState([]); 
-    const [selectedItemId, setSelectedItemId] = useState('');
+    const [quantity, setQuantity] = useState(1);
+    const [items, setItems] = useState([]);
+    const [selectedItemId, setSelectedItemId] = useState(null);
+    const [selectedItemPrice, setSelectedItemPrice] = useState(0);
+    const [date, setDate] = useState('');
+    const [total, setTotal] = useState(0);
 
     useEffect(() => {
         const fetchItems = async () => {
@@ -22,9 +23,26 @@ const AddOrderModal = ({ isOpen, onClose, onAdd }) => {
                 console.error('Error fetching items:', error);
             }
         };
-
         fetchItems();
+
+        const today = new Date().toISOString().split('T')[0];
+        setDate(today);
     }, []);
+
+    useEffect(() => {
+        const numericItemId = parseInt(selectedItemId, 10);
+        const selectedItem = items.find(item => item.itemId === numericItemId);
+        
+        if (selectedItem) {
+            const itemPrice = selectedItem.price || 0;
+            setSelectedItemPrice(itemPrice);
+            const calculatedTotal = itemPrice * quantity;
+            setTotal(calculatedTotal);
+        } else {
+            setSelectedItemPrice(0);
+            setTotal(0);
+        }
+    }, [selectedItemId, items, quantity]);
 
     if (!isOpen) return null;
 
@@ -37,11 +55,21 @@ const AddOrderModal = ({ isOpen, onClose, onAdd }) => {
             location,
             modeOfPayment,
             paymentStatus,
-            price,
-            quantity // Include quantity in the order data
+            price: total,
+            quantity
         };
         await onAdd(newOrder); 
         onClose(); 
+
+        // Clear all fields after adding the order
+        setCustomerName('');
+        setLocation('');
+        setModeOfPayment('');
+        setPaymentStatus('');
+        setQuantity(1);
+        setSelectedItemId(null);
+        setSelectedItemPrice(0);
+        setTotal(0);
     };
 
     return (
@@ -49,29 +77,12 @@ const AddOrderModal = ({ isOpen, onClose, onAdd }) => {
             <div className="modal-content">
                 <h2>Add New Order</h2>
                 <form onSubmit={handleSubmit}>
-                    <select 
-                        value={selectedItemId} 
-                        onChange={(e) => setSelectedItemId(e.target.value)} 
-                        required
-                    >
-                        <option value="" disabled>Select Item</option>
-                        {items.map(item => (
-                            <option key={item.itemId} value={item.itemId}>
-                                {item.itemName}
-                            </option>
-                        ))}
-                    </select>
+                    
                     <input
                         type="text"
                         placeholder="Customer Name"
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
-                        required
-                    />
-                    <input
-                        type="date"
-                        value={date}
-                        onChange={(e) => setDate(e.target.value)}
                         required
                     />
                     <input
@@ -97,20 +108,29 @@ const AddOrderModal = ({ isOpen, onClose, onAdd }) => {
                         <option value="Paid">Paid</option>
                         <option value="Not Paid">Unpaid</option>
                     </select>
-                    <input
-                        type="number"
-                        placeholder="Price"
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
+                    <select 
+                        value={selectedItemId || ""} 
+                        onChange={(e) => setSelectedItemId(e.target.value)} 
                         required
-                    />
+                    >
+                        <option value="" disabled>Select Item</option>
+                        {items.map(item => (
+                            <option key={item.itemId} value={item.itemId}>
+                                {item.itemName}
+                            </option>
+                        ))}
+                    </select>
                     <input
                         type="number"
+                        min="1"
                         placeholder="Quantity"
                         value={quantity}
-                        onChange={(e) => setQuantity(e.target.value)}
+                        onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
                         required
                     />
+                    <div className="price-display">
+                        <strong>Total Price:</strong> ₱{total.toFixed(2)}
+                    </div>
                     <button type="submit">Add Order</button>
                     <button type="button" onClick={onClose}>Cancel</button>
                 </form>
