@@ -1,0 +1,118 @@
+body{
+    background-color: #e0e0e0;
+}
+
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh; /* Sets the container to be the full height of the viewport */
+}
+
+.box {
+    display: flex;
+    overflow: hidden;
+    width: 90%;
+    max-width: 1000px;
+    height: 80%;
+    box-shadow: 0px 0px 20px 0px rgba(0, 0, 0, 0.2);
+    border-radius: 20px;
+}
+
+.left-div, .right-div {
+    flex-grow: 1;
+    padding: 20px;
+}
+
+.left-div {
+    background-color: #666666;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.right-div {
+    width: 5%;
+    background: linear-gradient(120deg, #ff0000, #ff8000, #ff8000);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
+}
+
+.form-container {
+    width: 70%;
+    max-width: 300px;
+    text-align: center;
+}
+
+.input-container {
+    position: relative;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.input-container input[type="text"],
+.input-container input[type="password"] {
+    width: 100%;
+    padding: 20px 10px 15px 50px;
+    display: inline-block;
+    border: none;
+    border-radius: 20px;
+    background-color: #f2f2f2;
+    box-sizing: border-box;
+}
+
+.input-container img {
+    position: absolute;
+    left: 20px;
+    width: 15px;
+}
+
+.form-container input[type="submit"] {
+    background-color: #ff6600;
+    color: white;
+    padding: 15px 0;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 10px;
+    transition: all 0.3s ease;
+}
+
+.form-container input[type="submit"]:hover {
+    background-color: #ff8533;
+}
+
+h2 {
+    color: white;
+    margin-bottom: 20px;
+}
+.contact-btn{
+    background-color: white;
+    color: black;
+    padding: 15px 0;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    width: 150px;
+    margin-top: 10px;
+    transition: all 0.3s ease;
+}
+
+.signup{
+   color: white;
+   margin-bottom: 0px; 
+}
+
+.signup-message{
+    margin: 20px;
+}
+
+.logo{
+    width: 70px;
+}
