@@ -352,6 +352,25 @@ app.get('/api/rawmats-data/:matId', (req, res) => {
     });
 });
 
+//delete supply delivery
+app.delete('/api/deleteSupDeli/:id', (req, res) => {
+    const { id } = req.params;
+    const sql = 'DELETE FROM tblsupdeli WHERE supDeliId = ?';
+    
+    db.query(sql, [id], (err, result) => {
+        if (err) {
+            console.error('Error deleting supply delivery:', err);
+            return res.status(500).send('Error deleting supply delivery');
+        }
+        
+        console.log('Delete result:', result); // Log the result of the deletion
+        if (result.affectedRows === 0) {
+            return res.status(404).send('Supply delivery not found');
+        }
+        
+        res.send('Supply delivery deleted successfully');
+    });
+});
 
 
 
@@ -902,7 +921,7 @@ app.post('/api/addProduction', async (req, res) => {
     const productionDate = new Date(); // Automatically set to today's date
 
     try {
-        const sql = 'INSERT INTO tblProduction (itemId, quantityProduced, staffName, productionDate) VALUES (?, ?, ?, ?, ?)';
+        const sql = 'INSERT INTO tblProduction (itemId, quantityProduced, staffName, productionDate) VALUES (?, ?, ?, ?)';
         await db.query(sql, [itemId, quantityProduced, staffName, productionDate]);
         res.status(200).send('Production record added successfully');
     } catch (error) {
@@ -1189,24 +1208,81 @@ app.get('/api/production-material-logs', (req, res) => {
     const query = `
         SELECT 
             logs.logId, 
-            logs.quantityUsed, 
             logs.dateLogged, 
             logs.description, 
-            mats.matName
+            mats.matName, 
+            logMats.quantity
         FROM 
             tblProductionMaterialLogs logs
-        JOIN 
-            tblRawMats mats ON logs.matId = mats.matId
+        LEFT JOIN 
+            tblMatLogsMats logMats ON logs.logId = logMats.logId
+        LEFT JOIN 
+            tblRawMats mats ON logMats.matId = mats.matId
+        ORDER BY 
+            logs.logId, mats.matName;
+
+
     `;
 
     db.query(query, (error, results) => {
         if (error) {
-            console.error('Database query error:', error);  // Log the error to the console
+            console.error('Database query error:', error);
             return res.status(500).json({ error: 'Database query failed' });
         }
         res.json(results);
     });
 });
+
+// Add production material log
+app.post('/api/addproductionlog', async (req, res) => {
+    const { description, dateLogged, materials } = req.body;
+
+    try {
+        // Insert production log entry into tblproductionmateriallogs
+        const logQuery = `INSERT INTO tblproductionmateriallogs (description, dateLogged) VALUES (?, ?)`;
+        const logValues = [description, dateLogged || new Date().toISOString().split('T')[0]]; // Use today's date if not provided
+
+        db.query(logQuery, logValues, (error, results) => {
+            if (error) {
+                console.error("Error adding production log: ", error);
+                return res.status(500).send("Server Error");
+            }
+
+            const newLogId = results.insertId; // Get the inserted log's ID
+
+            // Now insert the material-log associations into tblmatlogsmats
+            if (materials && materials.length > 0) {
+                // Ensure all materials are valid and present in tblrawmats
+                const validMaterials = materials.filter(m => m.materialId); // Filter out invalid materials
+                
+                if (validMaterials.length > 0) {
+                    const materialLogQuery = `
+                        INSERT INTO tblmatlogsmats (logId, matId, quantity) 
+                        VALUES ${validMaterials.map(() => "(?, ?, ?)").join(", ")}
+                    `;
+                    const materialLogValues = validMaterials.flatMap(m => [newLogId, m.materialId, m.quantity]);
+
+                    db.query(materialLogQuery, materialLogValues, (err) => {
+                        if (err) {
+                            console.error("Error adding materials to production log: ", err);
+                            return res.status(500).send("Server Error");
+                        }
+                        res.send("Production log and materials added successfully");
+                    });
+                } else {
+                    res.status(400).send("No valid materials provided.");
+                }
+            } else {
+                res.send("Production log added without materials.");
+            }
+        });
+    } catch (error) {
+        console.error("Error in adding production log: ", error);
+        res.status(500).send("Server Error");
+    }
+});
+
+
 
 
 

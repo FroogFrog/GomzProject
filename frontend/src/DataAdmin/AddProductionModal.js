@@ -7,7 +7,6 @@ function AddProductionModal({ isOpen, onClose, items, onAdd }) {
     const [production, setProduction] = useState({
         itemId: '',
         quantityProduced: '',
-        status: 'In Progress', // Keep status here
         staffName: '', // Added staffName field
     });
 
@@ -27,8 +26,10 @@ function AddProductionModal({ isOpen, onClose, items, onAdd }) {
         }
     };
 
-    return isOpen ? (
-        <div className="modal">
+    if (!isOpen) return null; // Return null if not open
+
+    return (
+        <div id="addModal" className="modal-overlay">
             <div className="modal-content">
                 <span className="close" onClick={onClose}>&times;</span>
                 <h2>Add Production Record</h2>
@@ -53,14 +54,6 @@ function AddProductionModal({ isOpen, onClose, items, onAdd }) {
                         />
                     </div>
                     <div className="form-group">
-                        <label>Status</label>
-                        <select name="status" value={production.status} onChange={handleChange} required>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Completed">Completed</option>
-                            <option value="Canceled">Canceled</option>
-                        </select>
-                    </div>
-                    <div className="form-group">
                         <label>Staff</label>
                         <input
                             type="text"
@@ -74,7 +67,7 @@ function AddProductionModal({ isOpen, onClose, items, onAdd }) {
                 </form>
             </div>
         </div>
-    ) : null;
+    )
 }
 
 export default AddProductionModal;

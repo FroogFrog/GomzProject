@@ -7,6 +7,7 @@ import Sidebar from '../BG/SystemAdminSidebar';
 import AddSupplierModal from './AddSupplierModal'; // Import your AddItemModal
 import EditSupplierModal from './EditSupplierModal'; // Import your EditItemModal
 import SupplierDetailsModal from './SupplierDetailsModal'; // Import the SupplierDetailsModal
+import DeleteModal from './DeleteModal'; // Import DeleteModal component
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
 function Supplier() {
@@ -15,6 +16,8 @@ function Supplier() {
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [isDetailsModalOpen, setDetailsModalOpen] = useState(false);
     const [selectedSupplier, setSelectedSupplier] = useState(null);
+    const [isDeleteModalOpen, setDeleteModalOpen] = useState(false); // State for delete modal
+    const [itemToDelete, setItemToDelete] = useState(null); // Item to delete
     const navigate = useNavigate();
 
     const fetchData = async () => {
@@ -60,6 +63,19 @@ function Supplier() {
         } catch (error) {
             console.error('Error deleting supplier:', error);
         }
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (itemToDelete) {
+            await deleteSupplier(itemToDelete.supplyId); // Call deleteItem with the itemId
+        }
+        setDeleteModalOpen(false); // Close the modal after deletion
+        setItemToDelete(null); // Clear the item to delete
+    };    
+
+    const confirmDeleteItem = (supply) => {
+        setItemToDelete(supply); // Set the item to be deleted
+        setDeleteModalOpen(true); // Open the delete modal
     };
 
     useEffect(() => {
@@ -137,7 +153,7 @@ function Supplier() {
                                             <button className="btn" onClick={() => openDetailsModal(supply)}>
                                                 <i className="fa-solid fa-eye"></i>
                                             </button>
-                                            <button className="btn" onClick={() => deleteSupplier(supply.supplyId)}>
+                                            <button className="btn" onClick={() => confirmDeleteItem(supply)}>
                                                 <i className="fa-solid fa-trash-can"></i>
                                             </button>
                                             <button className="btn" onClick={() => handleEditClick(supply)}>
@@ -166,7 +182,11 @@ function Supplier() {
                 supplier={selectedSupplier} 
                 onUpdate={updateSupplier} 
             />
-
+            <DeleteModal
+                    isOpen={isDeleteModalOpen}
+                    onClose={() => setDeleteModalOpen(false)}
+                    onConfirm={handleDeleteConfirm}
+            />
             {/* Supplier Details Modal */}
             <SupplierDetailsModal
                 isOpen={isDetailsModalOpen}

@@ -6,7 +6,6 @@ function UpdateProductionModal({ isOpen, onClose, items, productionId, onUpdate 
     const [production, setProduction] = useState({
         itemId: '',
         quantityProduced: '',
-        status: 'In Progress',
         staffName: '',
     });
 
@@ -18,7 +17,6 @@ function UpdateProductionModal({ isOpen, onClose, items, productionId, onUpdate 
             setProduction({
                 itemId: '',
                 quantityProduced: '',
-                status: 'In Progress',
                 productionDate: '',
                 staffName: '',
             });
@@ -37,7 +35,6 @@ function UpdateProductionModal({ isOpen, onClose, items, productionId, onUpdate 
                     setProduction({
                         itemId: productionData.itemId || '',   // Default to empty string if undefined
                         quantityProduced: productionData.quantityProduced || '',
-                        status: productionData.status || 'In Progress',
                         productionDate: productionData.productionDate || '',
                         staffName: productionData.staffName || ''
                     });
@@ -69,7 +66,7 @@ function UpdateProductionModal({ isOpen, onClose, items, productionId, onUpdate 
 
     return (
         isOpen && (
-            <div className="modal">
+            <div id="addModal" className="modal-overlay">
                 <div className="modal-content">
                     <span className="close" onClick={onClose}>&times;</span>
                     <h2>Update Production Record</h2>
@@ -102,19 +99,6 @@ function UpdateProductionModal({ isOpen, onClose, items, productionId, onUpdate 
                             />
                         </div>
 
-                        <div className="form-group">
-                            <label>Status</label>
-                            <select
-                                name="status"
-                                required
-                                value={production.status}
-                                onChange={handleChange}
-                            >
-                                <option value="In Progress">In Progress</option>
-                                <option value="Completed">Completed</option>
-                                <option value="Canceled">Canceled</option>
-                            </select>
-                        </div>
 
                         <div className="form-group">
                             <label>Staff Name</label>

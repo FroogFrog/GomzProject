@@ -5,6 +5,7 @@ import Header from '../BG/DataAdminHeader';
 import Sidebar from '../BG/DataAdminSidebar';
 import AddSupplyDeliveryModal from './AddSupplyDeliveryModal'; // Ensure this is the correct path
 import UpdateSupplyDeliveryModal from './UpdateSupplyDeliveryModal'; // Import the modal
+import DeleteModal from './DeleteModal'; // Import DeleteModal component
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
 function SupplyDeliveries() {
@@ -14,6 +15,8 @@ function SupplyDeliveries() {
     const [isAddModalOpen, setAddModalOpen] = useState(false); // Modal state for adding
     const [isUpdateModalOpen, setUpdateModalOpen] = useState(false); // Modal state for updating
     const [selectedDeliveryId, setSelectedDeliveryId] = useState(null); // Store selected delivery for update
+    const [isDeleteModalOpen, setDeleteModalOpen] = useState(false); // State for delete modal
+    const [itemToDelete, setItemToDelete] = useState(null); // Item to delete
 
     const fetchData = async () => {
         try {
@@ -54,7 +57,19 @@ function SupplyDeliveries() {
             console.error('Error deleting item:', error);
         }
     };
-    
+
+    const handleDeleteConfirm = async () => {
+        if (itemToDelete) {
+            await deleteItem(itemToDelete.supDeliId); // Call deleteItem with the itemId
+        }
+        setDeleteModalOpen(false); // Close the modal after deletion
+        setItemToDelete(null); // Clear the item to delete
+    };    
+
+    const confirmDeleteItem = (item) => {
+        setItemToDelete(item); // Set the item to be deleted
+        setDeleteModalOpen(true); // Open the delete modal
+    };
 
     // Function to open the update modal
     const openUpdateModal = (id) => {
@@ -126,7 +141,7 @@ function SupplyDeliveries() {
                                         <td>₱{delivery.cost}</td>
                                         <td>{formatDate(delivery.date)}</td>
                                         <td>
-                                            <button className="btn" onClick={() => deleteItem(delivery.supDeliId)}>
+                                            <button className="btn" onClick={() => confirmDeleteItem(delivery)}>
                                                 <i className="fa-solid fa-trash-can"></i>
                                             </button>
                                             <button className="edit-btn" onClick={() => openUpdateModal(delivery.supDeliId)}>
@@ -148,6 +163,12 @@ function SupplyDeliveries() {
                 suppliers={suppliers} 
                 items={items}
                 onAdd={fetchData} 
+            />
+
+            <DeleteModal
+                    isOpen={isDeleteModalOpen}
+                    onClose={() => setDeleteModalOpen(false)}
+                    onConfirm={handleDeleteConfirm}
             />
 
             {/* Update Supply Delivery Modal */}

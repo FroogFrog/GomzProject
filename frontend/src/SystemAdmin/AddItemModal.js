@@ -1,105 +1,84 @@
-import React, { useEffect, useState } from 'react';
-import '../css/style.css';
-import Header from '../BG/SalesAdminHeader';
-import Sidebar from '../BG/SalesAdminSidebar';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import moment from "moment";
-import AddItemModal from './AddItemModal'; // Adjust the import based on your file structure
+import '../css/AddItemModal.css'; // You can style your modal here
 
-function Order() {
-    const [orders, setOrders] = useState([]);
-    const [isAddModalOpen, setAddModalOpen] = useState(false); // State for controlling the modal
+const AddItemModal = ({ isOpen, onClose, onAdd }) => {
+    const [itemName, setItemName] = useState('');
+    const [price, setPrice] = useState('');
+    const [description, setDescription] = useState('');
+    const [category, setCategory] = useState('');
+    const [categories, setCategories] = useState([]); // Store fetched inventory categories
 
-    // Fetch orders from the backend
-    const fetchOrders = async () => {
-        try {
-            const response = await axios.get('http://localhost:5000/api/orders');
-            setOrders(response.data);
-        } catch (error) {
-            console.error('Error fetching orders:', error);
-        }
-    };
+    
 
+    console.log("Add Supply Delivery Modal isOpen:", isOpen); // Log isOpen prop
+
+    // Fetch inventory categories from backend when the modal opens
     useEffect(() => {
-        fetchOrders();
-    }, []);
-
-    const handleAddOrder = async (newOrder) => {
-        try {
-            const response = await axios.post('http://localhost:5000/api/orders', newOrder);
-            setOrders((prevOrders) => [...prevOrders, response.data]); // Update the orders list
-        } catch (error) {
-            console.error('Error adding order:', error);
+        if (isOpen) {
+            axios.get('http://localhost:5000/api/categories/inventory')
+                .then(response => {
+                    setCategories(response.data);
+                })
+                .catch(error => {
+                    console.error('Error fetching inventory categories:', error);
+                });
         }
+    }, [isOpen]); // Runs when the modal opens
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        const newItem = { itemName, price, category, description };
+        onAdd(newItem);
+        onClose(); // Close the modal after adding
     };
+
+    if (!isOpen) return null;
 
     return (
-        <div className="container">
-            <Sidebar />
-            <Header />
-            <div className='main-content'>
-                <div className="page-title">Orders</div>
-                <div className="info">
-                    <div className="above-table">
-                        <button className="btn" onClick={() => setAddModalOpen(true)}>
-                            <i className="fa-solid fa-add"></i> Add
-                        </button>
-                        <button className="btn" id="sortButton">
-                            <i className="fa-solid fa-sort"></i> Sort
-                        </button>
-                    </div>
-                    <div className="t-head">
-                        <table className="table-head">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Customer</th>
-                                    <th>Order Date</th>
-                                    <th>Location</th>
-                                    <th>Mode of Payment</th>
-                                    <th>Payment Status</th>
-                                    <th>Status</th>
-                                    <th>Price</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                        </table>
-                    </div>
-                    <div className="table-list">
-                        <table>
-                            <tbody>
-                                {orders.map((order, index) => (
-                                    <tr key={order.orderId}>
-                                        <td>{index + 1}</td>
-                                        <td>{order.customerName}</td>
-                                        <td>{moment(order.date).format("MM-DD-YYYY")}</td>
-                                        <td>{order.location}</td>
-                                        <td>{order.modeOfPayment}</td>
-                                        <td>{order.paymentStatus}</td>
-                                        <td>{order.status}</td>
-                                        <td>${order.price.toFixed(2)}</td>
-                                        <td>
-                                            <button className="btn" onClick={() => console.log('View Order')}>
-                                                <i className="fa-solid fa-eye"></i>
-                                            </button>
-                                            <button className="btn" onClick={() => console.log('Delete Order')}>
-                                                <i className="fa-solid fa-trash-can"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>     
-                    </div>
-                </div>
+        <div id="addModal" className="modal-overlay">
+            <div className="modal-content">
+                <h2>Add New Item</h2>
+                <form onSubmit={handleSubmit}>
+                    <input
+                        type="text"
+                        placeholder="Item Name"
+                        value={itemName}
+                        onChange={(e) => setItemName(e.target.value)}
+                        required
+                    />
+                    <input
+                        type="number"
+                        placeholder="Price"
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        required
+                    />
+                    <select
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        required
+                    >
+                        <option value="" disabled>Select Category</option>
+                        {categories.map((cat) => (
+                            <option key={cat.id} value={cat.categoryName}>
+                                {cat.categoryName}
+                            </option>
+                        ))}
+                    </select>
+                    <input
+                        type="text"
+                        placeholder="Description"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        required
+                    />
+                    <button type="submit">Add Item</button>
+                    <button type="button" onClick={onClose}>Cancel</button>
+                </form>
             </div>
-            <AddItemModal 
-                isOpen={isAddModalOpen} 
-                onClose={() => setAddModalOpen(false)} 
-                onAdd={handleAddOrder} 
-            />
         </div>
     );
-}
+};
 
-export default Order;
+export default AddItemModal;

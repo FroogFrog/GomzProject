@@ -112,3 +112,25 @@ tr:hover {
 .price-display, .total-display {
     margin: 10px 0;
 }
+
+.modalBtn {
+    padding: 10px 20px;
+    margin-top: 10px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.modalBtn.confirm {
+    background-color: #28a745;
+    color: white;
+}
+
+.modalBtn.cancel {
+    background-color: #dc3545;
+    color: white;
+}
+
+.modalBtn:hover {
+    opacity: 0.9;
+}
