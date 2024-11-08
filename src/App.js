@@ -20,11 +20,18 @@ import DataAdminRawMats from './DataAdmin/RawMats';
 import DataAdminSupplier from './DataAdmin/Supplier';
 import DataAdminSupplyDelivery from './DataAdmin/SupplyDeliveries';
 import DataAdminProduction from './DataAdmin/Production';
+import DataAdminProductionMaterialsLogs from './DataAdmin/ProductionMaterialsLog.js';
 
 
 
 import SalesAdmin from './login/SalesAdmin';
 import SalesAdminDashboard from './SalesAdmin/Dashboard';
+import SalesAdminOrder from './SalesAdmin/Order';
+import PerparingOrders  from './SalesAdmin/PreparingOrders.js';
+import DeliveryOrders  from './SalesAdmin/DeliveryOrder.js';
+import Sales  from './SalesAdmin/Sales.js';
+import Cancelled  from './SalesAdmin/Cancelled.js';
+
 
 
 
@@ -80,11 +87,19 @@ function App() {
           <Route path='/data-admin/supplier' element={<DataAdminSupplier/>} />
           <Route path='/data-admin/supply-delivery' element={<DataAdminSupplyDelivery/>} />
           <Route path='/data-admin/production' element={<DataAdminProduction/>} />
+          <Route path='/data-admin/productionmateriallogs' element={<DataAdminProductionMaterialsLogs/>} />
+          
 
 
 
           <Route path="/sales-admin" element={<SalesAdmin />} />
           <Route path="/sales-admin/dashboard" element={<SalesAdminDashboard />} />
+          <Route path="/sales-admin/order" element={<SalesAdminOrder />} />
+          <Route path="/sales-admin/preparing" element={<PerparingOrders />} />
+          <Route path="/sales-admin/on-delivery" element={<DeliveryOrders />} />
+          <Route path="/sales-admin/sales" element={<Sales />} />
+          <Route path="/sales-admin/cancelled" element={<Cancelled />} />
+          
 
 
           <Route path="/dashboard" element={<Dashboard />} />

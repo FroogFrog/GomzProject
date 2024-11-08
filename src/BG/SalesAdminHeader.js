@@ -43,40 +43,49 @@ function Header() {
 
   return (
     <div className="header">
-      Welcome back, <span className="username">Username!</span>
-      <span className="navbar-icons">
-        <div className="dropdown" ref={notificationDropdownRef}>
-          <button type="button" className="icon-button" onClick={() => setNotificationOpen(!isNotificationOpen)}>
-            <FontAwesomeIcon icon={faBell} />
-            <span className="icon-button-badge">1</span>
-          </button>
-          {isNotificationOpen && (
-            <div className="dropdown-content">
-              <ul>
-                <li><a href="#">Notification 1</a></li>
-              </ul>
-            </div>
-          )}
-        </div>
-        <div className="dropdown" ref={userDropdownRef}>
-          <button
-            type="button"
-            className="icon-button"
-            onClick={() => setUserDropdownOpen(!isUserDropdownOpen)}
-          >
-            <FontAwesomeIcon icon={faUser} />
-          </button>
-          {isUserDropdownOpen && (
-            <div className="dropdown-content">
-              <ul>
-                <li><a href="#">Profile</a></li>
-                <li><a href="#">Settings</a></li>
-                <li><a href="#" onClick={handleLogout}>Logout</a></li>
-              </ul>
-            </div>
-          )}
-        </div>
-      </span>
+      <div>Welcome back,<span className="username"> Username!</span></div>
+      <div className="dropdown">
+        <span className="role">Sales Admin</span>
+
+        {/* Notification Button */}
+        <button
+          type="button"
+          className="icon-button"
+          id="notificationButton"
+          onClick={() => setNotificationOpen(!isNotificationOpen)}
+        >
+          <FontAwesomeIcon icon={faBell} />
+          <span className="icon-button-badge">1</span>
+        </button>
+
+        {/* User Button */}
+        <button
+          type="button"
+          className="icon-button"
+          id="userButton"
+          onClick={() => setUserDropdownOpen(!isUserDropdownOpen)}
+        >
+          <FontAwesomeIcon icon={faUser} />
+        </button>
+
+        {/* Notification Dropdown */}
+        {isNotificationOpen && (
+          <div className="dropdown-notif" ref={notificationDropdownRef}>
+            <a href="#">Notification 1</a>
+            <a href="#">Notification 2</a>
+            <a href="#">Notification 3</a>
+          </div>
+        )}
+
+        {/* User Dropdown */}
+        {isUserDropdownOpen && (
+          <div className="dropdown-user" ref={userDropdownRef}>
+            <a href="#">Profile</a>
+            <a href="#">Settings</a>
+            <a href="#" onClick={handleLogout}>Log Out</a>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

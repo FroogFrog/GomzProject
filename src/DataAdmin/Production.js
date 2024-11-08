@@ -5,6 +5,7 @@ import Header from '../BG/DataAdminHeader';
 import Sidebar from '../BG/DataAdminSidebar';
 import AddProductionModal from './AddProductionModal'; // Add production modal
 import UpdateProductionModal from './UpdateProductionModal'; // Update production modal
+import DeleteModal from './DeleteModal'; // Import DeleteModal component
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
 function Production() {
@@ -13,6 +14,8 @@ function Production() {
     const [isAddModalOpen, setAddModalOpen] = useState(false);
     const [isUpdateModalOpen, setUpdateModalOpen] = useState(false);
     const [selectedProductionId, setSelectedProductionId] = useState(null); // Store selected production for update
+    const [isDeleteModalOpen, setDeleteModalOpen] = useState(false); // State for delete modal
+    const [itemToDelete, setItemToDelete] = useState(null); // Item to delete
 
     // Fetch production data, inventory items
     const fetchData = async () => {
@@ -42,6 +45,19 @@ function Production() {
         } catch (error) {
             console.error('Error deleting item:', error);
         }
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (itemToDelete) {
+            await deleteItem(itemToDelete.productionId); // Call deleteItem with the itemId
+        }
+        setDeleteModalOpen(false); // Close the modal after deletion
+        setItemToDelete(null); // Clear the item to delete
+    };    
+
+    const confirmDeleteItem = (item) => {
+        setItemToDelete(item); // Set the item to be deleted
+        setDeleteModalOpen(true); // Open the delete modal
     };
 
     const openUpdateModal = (id) => {
@@ -121,7 +137,7 @@ function Production() {
                                         <td>{formatDate(production.productionDate)}</td>
                                         <td>{production.staffName}</td>
                                         <td>
-                                            <button className="btn" onClick={() => deleteItem(production.productionId)}>
+                                            <button className="btn" onClick={() => confirmDeleteItem(production)}>
                                                 <i className="fa-solid fa-trash-can"></i>
                                             </button>
                                             <button className="edit-btn" onClick={() => openUpdateModal(production.productionId)}>
@@ -145,6 +161,12 @@ function Production() {
                 onUpdate={fetchData} // Refresh data after update
             />
 
+            <DeleteModal
+                    isOpen={isDeleteModalOpen}
+                    onClose={() => setDeleteModalOpen(false)}
+                    onConfirm={handleDeleteConfirm}
+            />
+
             {/* Add Production Modal */}
             <AddProductionModal
                 isOpen={isAddModalOpen}
@@ -152,6 +174,7 @@ function Production() {
                 items={items}
                 onAdd={fetchData} // Refresh data after adding
             />
+
         </div>
     );
 }

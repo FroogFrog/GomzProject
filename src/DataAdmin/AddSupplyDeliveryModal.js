@@ -15,32 +15,27 @@ const AddSupplyDeliveryModal = ({ isOpen, onClose, suppliers, onAdd }) => {
     const handleSupplierChange = async (e) => {
         const selectedSupplyId = e.target.value;
         setSupplyId(selectedSupplyId);
-        console.log('Selected Supplier ID:', selectedSupplyId);
     
         const selectedSupplier = suppliers.find((s) => s.supplyId === parseInt(selectedSupplyId, 10));
     
         if (selectedSupplier) {
             try {
                 const response = await axios.get(`http://localhost:5000/api/getrawmaterials/${selectedSupplyId}`);
-                console.log('API Response:', response.data); // Log the API response
-    
+                
                 // Check if response data is in the expected format
                 if (Array.isArray(response.data)) {
                     const fetchedItems = response.data.map(item => ({
                         id: item.matId, // Ensure this is correctly defined
                         name: item.matName  // Ensure this is correctly defined
                     }));
-                    console.log('Fetched Items:', fetchedItems); // Log the fetched items
-    
+                    
                     setItems(fetchedItems);
                     setItemName(''); // Reset item selection when supplier changes
                     setMatId(''); // Reset matId when supplier changes
                 } else {
-                    console.error('Unexpected response format:', response.data);
                     setItems([]); // Clear items if the format is unexpected
                 }
             } catch (error) {
-                console.error('Error fetching raw materials:', error);
                 setItems([]); // Clear items on error
             }
         } else {
@@ -51,11 +46,9 @@ const AddSupplyDeliveryModal = ({ isOpen, onClose, suppliers, onAdd }) => {
     const handleItemChange = (e) => {
         const selectedItemName = e.target.value;
         setItemName(selectedItemName);
-        console.log('Selected Item Name:', selectedItemName); // Log the selected item name
-
+        
         // Find the matId corresponding to the selected itemName
         const selectedItem = items.find(item => item.name === selectedItemName);
-        console.log('Selected Item:', selectedItem); // Log the selected item
         setMatId(selectedItem ? selectedItem.id : ''); // Set matId or reset if not found
     };
 
@@ -71,8 +64,7 @@ const AddSupplyDeliveryModal = ({ isOpen, onClose, suppliers, onAdd }) => {
             date 
         };
 
-        console.log('Submitting new supply delivery:', newSupplyDelivery); // Log submission data
-
+        
         // Make POST request to add supply delivery
         try {
             await axios.post('http://localhost:5000/api/addsupplydelivery', newSupplyDelivery);

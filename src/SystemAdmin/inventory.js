@@ -3,10 +3,11 @@ import '../css/style.css';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '../BG/SystemAdminHeader';
-import Sidebar from '../BG/SystemAdminSidebar';
+import Sidebar from '../BG/SystemAdminSidebar';     
 import AddItemModal from './AddItemModal';
 import EditItemModal from './EditItemModal';
 import DetailsModal from './ItemDetailsModal';  // Import DetailsModal component
+import DeleteModal from './DeleteModal'; // Import DeleteModal component
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
 function Inventory() {
@@ -16,6 +17,8 @@ function Inventory() {
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [isDetailsModalOpen, setDetailsModalOpen] = useState(false);  // State for details modal
     const [currentItem, setCurrentItem] = useState(null);
+    const [isDeleteModalOpen, setDeleteModalOpen] = useState(false); // State for delete modal
+    const [itemToDelete, setItemToDelete] = useState(null); // Item to delete
     const navigate = useNavigate();
 
     const fetchData = async () => {
@@ -63,6 +66,19 @@ function Inventory() {
         } catch (error) {
             console.error('Error deleting item:', error);
         }
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (itemToDelete) {
+            await deleteItem(itemToDelete.itemId); // Call deleteItem with the itemId
+        }
+        setDeleteModalOpen(false); // Close the modal after deletion
+        setItemToDelete(null); // Clear the item to delete
+    };    
+
+    const confirmDeleteItem = (item) => {
+        setItemToDelete(item); // Set the item to be deleted
+        setDeleteModalOpen(true); // Open the delete modal
     };
 
     useEffect(() => {
@@ -143,9 +159,10 @@ function Inventory() {
                                             <button title="View Details" className="btn" onClick={() => openDetailsModal(item)}>
                                                 <i className="fa-solid fa-eye"></i>
                                             </button>
-                                            <button className="btn" onClick={() => deleteItem(item.itemId)}>
+                                            <button className="btn" onClick={() => confirmDeleteItem(item)}>
                                                 <i className="fa-solid fa-trash-can"></i>
                                             </button>
+
                                             <button className="edit-btn" onClick={() => openEditModal(item)}>
                                                 <i className="fa-solid fa-pen-to-square"></i>
                                             </button>
@@ -168,13 +185,23 @@ function Inventory() {
                 item={currentItem}
                 onUpdate={updateItem}
             />
+            <DeleteModal
+                    isOpen={isDeleteModalOpen}
+                    onClose={() => setDeleteModalOpen(false)}
+                    onConfirm={handleDeleteConfirm}
+            />
             <DetailsModal
                 isOpen={isDetailsModalOpen}
                 onClose={() => setDetailsModalOpen(false)}
                 item={currentItem}  // Ensure currentItem is properly set
                 inventoryDetails={inventoryDetails}  // Pass the correct inventory details
             />
-        </div>
+            {/* 
+            
+             */}
+            </div>
+            
+        
     );
 }
 

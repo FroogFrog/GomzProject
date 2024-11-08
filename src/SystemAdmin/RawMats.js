@@ -4,6 +4,7 @@ import Sidebar from '../BG/SystemAdminSidebar';
 import AddRawMatsModal from './AddRawMatsModal';  
 import EditRawMatsModal from './EditRawMatsModal';  
 import RawMatDetailsModal from './RawMatsDetailsModal'; // Import the new modal
+import DeleteModal from './DeleteModal'; // Import DeleteModal component
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import axios from 'axios';
 import '../css/style.css';
@@ -14,6 +15,8 @@ function RawMats() {
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [isDetailsModalOpen, setDetailsModalOpen] = useState(false); // State for details modal
     const [currentMats, setCurrentMats] = useState(null);
+    const [isDeleteModalOpen, setDeleteModalOpen] = useState(false); // State for delete modal
+    const [itemToDelete, setItemToDelete] = useState(null); // Item to delete
 
     const fetchData = async () => {
         try {
@@ -49,6 +52,19 @@ function RawMats() {
         } catch (error) {
             console.error('Error updating raw material:', error);
         }
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (itemToDelete) {
+            await deleteItem(itemToDelete.matId); // Call deleteItem with the itemId
+        }
+        setDeleteModalOpen(false); // Close the modal after deletion
+        setItemToDelete(null); // Clear the item to delete
+    };    
+
+    const confirmDeleteItem = (item) => {
+        setItemToDelete(item); // Set the item to be deleted
+        setDeleteModalOpen(true); // Open the delete modal
     };
 
     const openEditModal = (mats) => {
@@ -126,7 +142,7 @@ function RawMats() {
                                             <button className="btn" onClick={() => openDetailsModal(rawMats)} key={rawMats.matId}>
                                                 <i className="fa-solid fa-eye"></i>
                                             </button>
-                                            <button className="btn" onClick={() => deleteItem(rawMats.matId)}>
+                                            <button className="btn" onClick={() => confirmDeleteItem(rawMats)}>
                                                 <i className="fa-solid fa-trash-can"></i>
                                             </button>
                                             <button className="btn" onClick={() => openEditModal(rawMats)}>
@@ -155,7 +171,11 @@ function RawMats() {
                 mats={currentMats}
                 onUpdate={updateRawMat}
             />
-
+            <DeleteModal
+                    isOpen={isDeleteModalOpen}
+                    onClose={() => setDeleteModalOpen(false)}
+                    onConfirm={handleDeleteConfirm}
+            />
             {/* Raw Material Details Modal */}
             <RawMatDetailsModal
                 isOpen={isDetailsModalOpen}
