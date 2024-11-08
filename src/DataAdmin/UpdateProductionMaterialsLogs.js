@@ -9,7 +9,7 @@ function UpdateProductionMaterialLogs({ isOpen, onClose, log, onUpdate }) {
     const [selectedMaterial, setSelectedMaterial] = useState('');
     const [quantity, setQuantity] = useState('');
     const [addedMaterials, setAddedMaterials] = useState([]);
-    
+
     useEffect(() => {
         const fetchMaterials = async () => {
             try {
@@ -31,10 +31,15 @@ function UpdateProductionMaterialLogs({ isOpen, onClose, log, onUpdate }) {
             setDescription(log.description || '');
             setDateLogged(log.dateLogged || '');
 
-            if (log.materialsUsed) {
-                const materials = log.materialsUsed.split(', ').map((item) => {
-                    const [matName, quantity] = item.split(': ');
-                    const matId = availableMaterials.find(material => material.matName === matName)?.matId || null;
+            if (log.matNames && log.quantities) {
+                // Assuming matNames and quantities are comma-separated
+                const materialNames = log.matNames.split(', ');
+                const materialQuantities = log.quantities.split(', ');
+
+                const materials = materialNames.map((matName, index) => {
+                    // Match matName to availableMaterials to get matId
+                    const matId = availableMaterials.find((material) => material.matName === matName)?.matId || null;
+                    const quantity = materialQuantities[index] || '0'; // Ensure quantity is valid
                     return { matId, matName, quantity };
                 });
                 setAddedMaterials(materials);
@@ -43,45 +48,78 @@ function UpdateProductionMaterialLogs({ isOpen, onClose, log, onUpdate }) {
     }, [log, availableMaterials]);
 
     const addMaterialToLog = () => {
+        console.log('Adding material to log...', { selectedMaterial, quantity });
         if (selectedMaterial && quantity) {
-            // Check if the material is already added
-            if (!addedMaterials.some((item) => item.matId === selectedMaterial)) {
-                const selectedMat = availableMaterials.find((m) => m.matId === selectedMaterial);
-                setAddedMaterials((prev) => [
-                    ...prev,
-                    { matId: selectedMaterial, matName: selectedMat?.matName, quantity }
-                ]);
-                setQuantity(''); // Reset quantity after adding
+            // Ensure selectedMaterial is a number
+            const selectedMatId = Number(selectedMaterial); // Convert to number if necessary
+            const selectedMat = availableMaterials.find((m) => m.matId === selectedMatId);
+            
+            if (selectedMat) {
+                console.log('Selected material:', selectedMat);
+                // Check if the material is already added
+                if (!addedMaterials.some((item) => item.matId === selectedMatId)) {
+                    setAddedMaterials((prev) => [
+                        ...prev,
+                        { matId: selectedMatId, matName: selectedMat.matName, quantity }
+                    ]);
+                    setQuantity(''); // Reset quantity after adding
+                } else {
+                    alert('This material has already been added.');
+                }
+                setSelectedMaterial(''); // Clear the selected material
             } else {
-                alert('This material has already been added.');
+                alert('Material not found.');
             }
-            setSelectedMaterial('');
         } else {
             alert('Please select a material and enter a quantity.');
         }
     };
+    
 
     const handleRemoveMaterial = (materialId) => {
+        console.log('Removing material with id:', materialId);
         setAddedMaterials((prev) => prev.filter((material) => material.matId !== materialId));
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
-
+    
+        // Check if all fields are filled correctly
+        console.log("Checking form values...");
+    
+        if (!log.logId || !description || !addedMaterials || addedMaterials.length === 0) {
+            alert('Please fill in all fields correctly.');
+            console.log("Missing fields: ", { logId: log.logId, description, addedMaterials });
+            return;
+        }
+    
+        // Prepare the updated log data
         const updatedLog = {
-            ...log,
+            logId: log.logId,
             description,
-            dateLogged,
-            materialsUsed: addedMaterials
-                .map((material) => `${material.matName}: ${material.quantity}`)
-                .join(', ')
+            dateLogged: dateLogged || new Date().toISOString().split('T')[0], // Ensure the date is set correctly
+            materials: addedMaterials.map(material => ({
+                matId: material.matId,
+                quantity: Number(material.quantity),  // Convert quantity to a number
+            })),
         };
         
+    
+        console.log("Updated log data:", updatedLog);
+    
+        // Call the onUpdate callback
         onUpdate(updatedLog);
+    
+        // Close the modal
         onClose();
     };
+    
+    
+    
+    
 
     const handleCancel = () => {
+        console.log('Canceling log update...');
         onClose();
     };
 
