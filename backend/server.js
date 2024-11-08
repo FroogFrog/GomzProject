@@ -1343,6 +1343,106 @@ app.post('/api/updateproductionlog', async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//all the dashboard for quickchart
+
+//sales order  per day summary
+app.get('/api/sales/summary', async (req, res) => {
+    try {
+        const { range, startDate, endDate } = req.query;
+
+        let query = '';
+        if (range === 'week') {
+            // Current Week query (Monday to Sunday)
+            query = `
+                SELECT 
+                    DAYNAME(date) AS day_of_week,
+                    COUNT(*) AS order_count
+                FROM 
+                    tblorders
+                WHERE 
+                    status = "delivered" 
+                    AND date >= CURDATE() - INTERVAL WEEKDAY(CURDATE()) DAY
+                    AND date < CURDATE() + INTERVAL (6 - WEEKDAY(CURDATE())) DAY
+                GROUP BY 
+                    DAYNAME(date)
+                ORDER BY 
+                    FIELD(DAYNAME(date), 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday');
+            `;
+        } else if (range === 'month') {
+            // Current Month query
+            query = `
+                SELECT 
+                    DAY(date) AS day_of_month,
+                    COUNT(*) AS order_count
+                FROM 
+                    tblorders
+                WHERE 
+                    status = "delivered" 
+                    AND MONTH(date) = MONTH(CURDATE()) 
+                    AND YEAR(date) = YEAR(CURDATE())
+                GROUP BY 
+                    DAY(date)
+                ORDER BY 
+                    DAY(date);
+            `;
+        }
+
+        // If startDate and endDate are provided (for custom range), adjust the query
+        if (startDate && endDate) {
+            query = `
+                SELECT 
+                    DAY(date) AS day_of_month,
+                    COUNT(*) AS order_count
+                FROM 
+                    tblorders
+                WHERE 
+                    status = "delivered" 
+                    AND DATE(date) BETWEEN ? AND ?
+                GROUP BY 
+                    DAY(date)
+                ORDER BY 
+                    DAY(date);
+            `;
+        }
+
+        db.query(query, [startDate, endDate], (err, results) => {
+            if (err) {
+                console.error('Error fetching order summary:', err);
+                return res.status(500).json({ error: 'Error fetching order summary' });
+            }
+            res.json(results); // Send the summarized results as JSON
+        });
+    } catch (error) {
+        console.error('Server error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+
+
+
+
+
+
+
+
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
