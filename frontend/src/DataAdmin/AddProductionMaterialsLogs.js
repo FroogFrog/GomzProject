@@ -15,6 +15,7 @@ const AddItemModal = ({ isOpen, onClose, onAdd }) => {
             try {
                 const response = await axios.get('http://localhost:5000/api/rawmats'); // Replace with the correct endpoint
                 setAvailableMaterials(response.data);
+                console.log('Fetched available materials:', response.data); // Log fetched materials
             } catch (error) {
                 console.error('Error fetching materials:', error);
             }
@@ -25,6 +26,7 @@ const AddItemModal = ({ isOpen, onClose, onAdd }) => {
             // Set the current date when the modal is opened
             const currentDate = new Date().toISOString().split('T')[0]; // Format the date as YYYY-MM-DD
             setDateLogged(currentDate);
+            console.log('Set current date:', currentDate); // Log current date
         }
     }, [isOpen]);
 
@@ -32,10 +34,12 @@ const AddItemModal = ({ isOpen, onClose, onAdd }) => {
         if (selectedMaterial && quantity) {
             // Check if the material is already added
             if (!addedMaterials.some((item) => item.materialId === selectedMaterial)) {
+                const newMaterial = { materialId: selectedMaterial, quantity: quantity };
                 setAddedMaterials((prev) => [
                     ...prev,
-                    { materialId: selectedMaterial, quantity: quantity },
+                    newMaterial,
                 ]);
+                console.log('Added material:', newMaterial); // Log the material added
                 setQuantity(''); // Reset quantity after adding
             } else {
                 alert('This material has already been added.');
@@ -47,7 +51,9 @@ const AddItemModal = ({ isOpen, onClose, onAdd }) => {
     };
 
     const handleRemoveMaterial = (materialId) => {
-        setAddedMaterials((prev) => prev.filter((item) => item.materialId !== materialId));
+        const updatedMaterials = addedMaterials.filter((item) => item.materialId !== materialId);
+        setAddedMaterials(updatedMaterials);
+        console.log('Removed material with ID:', materialId); // Log material removed
     };
 
     const handleSubmit = (e) => {
@@ -57,6 +63,7 @@ const AddItemModal = ({ isOpen, onClose, onAdd }) => {
             dateLogged, // Automatically includes today's date
             materials: addedMaterials,
         };
+        console.log('Submitted new log:', newLog); // Log the full log details before sending
         onAdd(newLog);
         onClose();
     };

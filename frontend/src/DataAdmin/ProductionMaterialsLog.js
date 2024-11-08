@@ -20,7 +20,7 @@ function ProductionMaterialsLogs() {
     const fetchLogs = async () => {
         try {
             const response = await axios.get('http://localhost:5000/api/production-material-logs');
-            console.log('Fetched logs:', response.data);
+            
             setLogs(response.data);
         } catch (error) {
             console.error('Error fetching production material logs:', error);
@@ -82,15 +82,23 @@ function ProductionMaterialsLogs() {
 
     // Handle log update
     const handleLogUpdated = async (updatedLog) => {
+        console.log('Submitting updated log:', updatedLog);
         try {
-            await axios.put(`http://localhost:5000/api/updatelog/${updatedLog.logId}`, updatedLog);
-            fetchLogs();
-            setUpdateModalOpen(false);
+            const response = await axios.post('http://localhost:5000/api/updateproductionlog', updatedLog);
+            console.log('Update response:', response.data); // Log the response data from the server
+            fetchLogs();  // Refresh the logs after updating
+            setUpdateModalOpen(false);  // Close the update modal
         } catch (error) {
-            console.error('Error updating production log:', error);
+            if (error.response) {
+                console.error('Error response from server:', error.response.data);
+            } else {
+                console.error('Error updating production log:', error);
+            }
             alert('Failed to update production log. Please try again.');
         }
     };
+    
+    
 
     return (
         <div className="container">
@@ -148,10 +156,13 @@ function ProductionMaterialsLogs() {
                                     </tr>
                                 ) : (
                                     filteredLogs.map((log, index) => {
-                                        // Parse materialsUsed into an array if it’s a comma-separated string
-                                        const materialsArray = typeof log.materialsUsed === 'string'
-                                            ? log.materialsUsed.split(',').map(material => material.trim())
-                                            : log.materialsUsed;
+                                        // Split matNames and quantities to create an array of objects
+                                        const materialNames = log.matNames ? log.matNames.split(', ') : [];
+                                        const materialQuantities = log.quantities ? log.quantities.split(', ') : [];
+                                        const materialsArray = materialNames.map((name, i) => ({
+                                            matName: name,
+                                            quantity: materialQuantities[i] || 'Unknown quantity',
+                                        }));
 
                                         return (
                                             <tr key={log.logId}>
@@ -159,10 +170,12 @@ function ProductionMaterialsLogs() {
                                                 <td>{log.description}</td>
                                                 <td>{new Date(log.dateLogged).toLocaleDateString()}</td>
                                                 <td>
-                                                    {Array.isArray(materialsArray) && materialsArray.length > 0 ? (
+                                                    {materialsArray.length > 0 ? (
                                                         <ul>
                                                             {materialsArray.map((material, i) => (
-                                                                <li key={i}>{material}</li>
+                                                                <li key={i}>
+                                                                    {material.matName} ({material.quantity})
+                                                                </li>
                                                             ))}
                                                         </ul>
                                                     ) : (

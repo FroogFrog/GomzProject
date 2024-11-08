@@ -1210,17 +1210,16 @@ app.get('/api/production-material-logs', (req, res) => {
             logs.logId, 
             logs.dateLogged, 
             logs.description, 
-            mats.matName, 
-            logMats.quantity
+            GROUP_CONCAT(mats.matName SEPARATOR ', ') AS matNames,
+            GROUP_CONCAT(logMats.quantity SEPARATOR ', ') AS quantities
         FROM 
             tblProductionMaterialLogs logs
         LEFT JOIN 
             tblMatLogsMats logMats ON logs.logId = logMats.logId
         LEFT JOIN 
             tblRawMats mats ON logMats.matId = mats.matId
-        ORDER BY 
-            logs.logId, mats.matName;
-
+        GROUP BY 
+            logs.logId;
 
     `;
 
@@ -1278,6 +1277,61 @@ app.post('/api/addproductionlog', async (req, res) => {
         });
     } catch (error) {
         console.error("Error in adding production log: ", error);
+        res.status(500).send("Server Error");
+    }
+});
+
+// Edit production material log
+app.post('/api/updateproductionlog', async (req, res) => {
+    const { description, dateLogged, materials, logId } = req.body;
+
+    try {
+        // Step 1: Update the production log entry in tblproductionmateriallogs
+        const logQuery = `UPDATE tblproductionmateriallogs SET description = ?, dateLogged = ? WHERE logId = ?`;
+        const logValues = [description, dateLogged || new Date().toISOString().split('T')[0], logId];
+
+        db.query(logQuery, logValues, (error) => {
+            if (error) {
+                console.error("Error updating production log: ", error);
+                return res.status(500).send("Server Error");
+            }
+
+            // Step 2: Remove existing materials from tblmatlogsmats
+            const deleteQuery = `DELETE FROM tblmatlogsmats WHERE logId = ?`;
+            db.query(deleteQuery, [logId], (deleteError) => {
+                if (deleteError) {
+                    console.error("Error deleting existing materials: ", deleteError);
+                    return res.status(500).send("Server Error");
+                }
+
+                // Step 3: Insert updated materials into tblmatlogsmats
+                if (materials && materials.length > 0) {
+                    const validMaterials = materials.filter(m => m.matId && !isNaN(m.quantity)); // Ensure valid materials
+
+                    if (validMaterials.length > 0) {
+                        const materialLogQuery = `
+                            INSERT INTO tblmatlogsmats (logId, matId, quantity)
+                            VALUES ${validMaterials.map(() => "(?, ?, ?)").join(", ")}
+                        `;
+                        const materialLogValues = validMaterials.flatMap(m => [logId, m.matId, m.quantity]);
+
+                        db.query(materialLogQuery, materialLogValues, (err) => {
+                            if (err) {
+                                console.error("Error adding materials to updated production log: ", err);
+                                return res.status(500).send("Server Error");
+                            }
+                            res.send("Production log and materials updated successfully");
+                        });
+                    } else {
+                        res.status(400).send("No valid materials provided.");
+                    }
+                } else {
+                    res.send("Production log updated without materials.");
+                }
+            });
+        });
+    } catch (error) {
+        console.error("Error updating production log: ", error);
         res.status(500).send("Server Error");
     }
 });
