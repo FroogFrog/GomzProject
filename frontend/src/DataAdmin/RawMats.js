@@ -1,49 +1,63 @@
-import React, { useEffect, useState } from 'react';
-import '../css/style.css';
-import axios from 'axios';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
 import Header from '../BG/DataAdminHeader';
 import Sidebar from '../BG/DataAdminSidebar';
 import '@fortawesome/fontawesome-free/css/all.min.css';
+import axios from 'axios';
+import '../css/style.css';
 
 function RawMats() {
     const [rawMats, setRawMats] = useState([]);
-    const navigate = useNavigate();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortedRawMats, setSortedRawMats] = useState([]);
+    const [sortConfig, setSortConfig] = useState({ key: 'matName', direction: 'asc' });
 
+    // Fetch raw materials data from the API
     const fetchData = async () => {
         try {
-            const response = await axios.get('http://localhost:5000/api/rawmats-data'); // Update endpoint as needed
+            const response = await axios.get('http://localhost:5000/api/rawmats');
             setRawMats(response.data);
+            setSortedRawMats(response.data); // Set the sortedRawMats initially to all rawMats data
         } catch (error) {
-            console.error('Error fetching raw materials data:', error);
+            console.error("Error fetching data: ", error);
         }
-    };
-
-    const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
-        const year = date.getFullYear();
-        return `${month}-${day}-${year}`;
     };
 
     useEffect(() => {
         fetchData();
     }, []);
 
+    // Handle search functionality
+    const handleSearch = (e) => {
+        setSearchQuery(e.target.value);
+    };
+
+    // Filter raw materials based on the search query
+    const filteredRawMats = sortedRawMats.filter((rawMat) =>
+        rawMat.matName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        rawMat.category.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    // Handle sorting functionality
+    const handleSort = (key) => {
+        const newDirection = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+        const sortedData = [...filteredRawMats].sort((a, b) => {
+            if (a[key] < b[key]) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (a[key] > b[key]) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+        setSortedRawMats(sortedData);
+        setSortConfig({ key, direction: newDirection });
+    };
+
     return (
         <div className="container">
             <Sidebar />
             <Header />
+
             <div className='main-content'>
-                <div className="page-title">Raw Materials</div>
+                <div className="page-title">RAW MATERIALS</div>
                 <div className="info">
                     <div className="above-table">
-                        <div className="above-table-wrapper">
-                            <button className="btn" id="sortButton">
-                                <i className="fa-solid fa-sort"></i> Sort
-                            </button>
-                        </div>
                         <div className="search-container">
                             <div className="search-wrapper">
                                 <label>
@@ -52,12 +66,11 @@ function RawMats() {
                                 <input
                                     type="text"
                                     className="search-input"
-                                    placeholder="Search..."
+                                    placeholder="Search by item name or category..."
+                                    value={searchQuery}
+                                    onChange={handleSearch}
                                     size="40"
                                 />
-                            </div>
-                            <div>
-                                <button id="searchButton" className="btn">Search</button>
                             </div>
                         </div>
                     </div>
@@ -66,11 +79,9 @@ function RawMats() {
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Item</th>
-                                    <th>Quantity</th>
-                                    <th>Date</th>
-                                    <th>Status</th>
-                                    <th>Last Updated</th>
+                                    <th onClick={() => handleSort('matName')}>Item Name</th>
+                                    <th onClick={() => handleSort('quantity')}>Quantity</th>
+                                    <th onClick={() => handleSort('category')}>Category</th>
                                 </tr>
                             </thead>
                         </table>
@@ -78,22 +89,14 @@ function RawMats() {
                     <div className="table-list">
                         <table>
                             <tbody>
-                                {rawMats.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="9" style={{ textAlign: 'center' }}>No raw materials found.</td>
+                                {filteredRawMats.map((rawMat, index) => (
+                                    <tr key={rawMat.matsId}>
+                                        <td>{index + 1}</td>
+                                        <td>{rawMat.matName}</td>
+                                        <td>{rawMat.quantity}</td>
+                                        <td>{rawMat.category}</td>
                                     </tr>
-                                ) : (
-                                    rawMats.map((rawMat, index) => (
-                                        <tr key={rawMat.rawMatId}> 
-                                            <td>{index + 1}</td>
-                                            <td>{rawMat.itemName}</td>
-                                            <td>{rawMat.quantity}</td>
-                                            <td>{formatDate(rawMat.date)}</td>
-                                            <td>{rawMat.status}</td> 
-                                            <td>{formatDate(rawMat.lastUpdated)}</td>
-                                        </tr>
-                                    ))
-                                )}
+                                ))}
                             </tbody>
                         </table>
                     </div>

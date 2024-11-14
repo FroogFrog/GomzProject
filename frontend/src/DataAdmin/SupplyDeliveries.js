@@ -7,6 +7,8 @@ import AddSupplyDeliveryModal from './AddSupplyDeliveryModal'; // Ensure this is
 import UpdateSupplyDeliveryModal from './UpdateSupplyDeliveryModal'; // Import the modal
 import DeleteModal from './DeleteModal'; // Import DeleteModal component
 import '@fortawesome/fontawesome-free/css/all.min.css';
+import { ToastContainer, toast } from 'react-toastify'; // Import ToastContainer and toast
+import 'react-toastify/dist/ReactToastify.css'; // Import the toast styles
 
 function SupplyDeliveries() {
     const [supDeli, setSupDeli] = useState([]);
@@ -17,6 +19,8 @@ function SupplyDeliveries() {
     const [selectedDeliveryId, setSelectedDeliveryId] = useState(null); // Store selected delivery for update
     const [isDeleteModalOpen, setDeleteModalOpen] = useState(false); // State for delete modal
     const [itemToDelete, setItemToDelete] = useState(null); // Item to delete
+    const [searchQuery, setSearchQuery] = useState(''); // State for search query
+    const [sortOrder, setSortOrder] = useState('asc'); // State for sort order
 
     const fetchData = async () => {
         try {
@@ -53,8 +57,10 @@ function SupplyDeliveries() {
         try {
             await axios.delete(`http://localhost:5000/api/deleteSupDeli/${id}`);
             fetchData(); // Refresh after deletion
+            toast.success('Supply Delivery deleted successfully!'); // Toast on delete success
         } catch (error) {
             console.error('Error deleting item:', error);
+            toast.error('Error deleting supply delivery.'); // Toast on delete failure
         }
     };
 
@@ -64,7 +70,7 @@ function SupplyDeliveries() {
         }
         setDeleteModalOpen(false); // Close the modal after deletion
         setItemToDelete(null); // Clear the item to delete
-    };    
+    };
 
     const confirmDeleteItem = (item) => {
         setItemToDelete(item); // Set the item to be deleted
@@ -77,9 +83,39 @@ function SupplyDeliveries() {
         setUpdateModalOpen(true);
     };
 
+    // Sort function
+    const sortData = (column) => {
+        const sortedData = [...supDeli].sort((a, b) => {
+            if (sortOrder === 'asc') {
+                return a[column] > b[column] ? 1 : -1;
+            } else {
+                return a[column] < b[column] ? 1 : -1;
+            }
+        });
+        setSupDeli(sortedData);
+        setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    };
+
+    // Function to filter data based on search
+    const filterData = (query) => {
+        return supDeli.filter((delivery) =>
+            (getSupply(delivery.supplyId)?.toLowerCase().includes(query.toLowerCase())) || 
+            (delivery.matName?.toLowerCase().includes(query.toLowerCase()))
+        );
+    };
+
     useEffect(() => {
         fetchData();
     }, []);
+
+    useEffect(() => {
+        if (searchQuery) {
+            const filteredData = filterData(searchQuery);
+            setSupDeli(filteredData);
+        } else {
+            fetchData(); // Reset to original data when searchQuery is cleared
+        }
+    }, [searchQuery]); // Trigger on searchQuery change
 
     return (
         <div className="container">
@@ -93,9 +129,6 @@ function SupplyDeliveries() {
                             <button className="btn" onClick={() => setAddModalOpen(true)}>
                                 <i className="fa-solid fa-add"></i> Add
                             </button>
-                            <button className="btn" id="sortButton">
-                                <i className="fa-solid fa-sort"></i> Sort
-                            </button>
                         </div>
                         <div className="search-container">
                             <div className="search-wrapper">
@@ -105,12 +138,11 @@ function SupplyDeliveries() {
                                 <input
                                     type="text"
                                     className="search-input"
-                                    placeholder="Search..."
+                                    placeholder="Search by Supplier or Item..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
                                     size="40"
                                 />
-                            </div>
-                            <div>
-                                <button id="searchButton" className="btn">Search</button>
                             </div>
                         </div>
                     </div>
@@ -119,11 +151,11 @@ function SupplyDeliveries() {
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Supplier Name</th>
-                                    <th>Item</th>
-                                    <th>Quantity</th>
-                                    <th>Cost</th>
-                                    <th>Date</th>
+                                    <th onClick={() => sortData('supplyId')}>Supplier Name</th>
+                                    <th onClick={() => sortData('matName')}>Item</th>
+                                    <th onClick={() => sortData('quantity')}>Quantity</th>
+                                    <th onClick={() => sortData('cost')}>Cost</th>
+                                    <th onClick={() => sortData('date')}>Date</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -156,19 +188,19 @@ function SupplyDeliveries() {
                 </div>
             </div>
 
-            {/* add Supply Delivery Modal */}
-            <AddSupplyDeliveryModal 
-                isOpen={isAddModalOpen} 
-                onClose={() => setAddModalOpen(false)} 
-                suppliers={suppliers} 
+            {/* Add Supply Delivery Modal */}
+            <AddSupplyDeliveryModal
+                isOpen={isAddModalOpen}
+                onClose={() => setAddModalOpen(false)}
+                suppliers={suppliers}
                 items={items}
-                onAdd={fetchData} 
+                onAdd={fetchData}
             />
 
             <DeleteModal
-                    isOpen={isDeleteModalOpen}
-                    onClose={() => setDeleteModalOpen(false)}
-                    onConfirm={handleDeleteConfirm}
+                isOpen={isDeleteModalOpen}
+                onClose={() => setDeleteModalOpen(false)}
+                onConfirm={handleDeleteConfirm}
             />
 
             {/* Update Supply Delivery Modal */}
@@ -177,10 +209,13 @@ function SupplyDeliveries() {
                 onClose={() => setUpdateModalOpen(false)}
                 suppliers={suppliers}
                 items={items}
-                setItems={setItems}  // Pass setItems correctly
+                setItems={setItems}
                 deliveryId={selectedDeliveryId}
-                onUpdate={fetchData}  // Refresh data after update
+                onUpdate={fetchData}
             />
+
+            {/* Toast Container */}
+            <ToastContainer />
         </div>
     );
 }

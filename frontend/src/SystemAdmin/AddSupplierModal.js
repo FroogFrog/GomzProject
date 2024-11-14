@@ -4,7 +4,6 @@ import axios from 'axios';
 
 const AddItemModal = ({ isOpen, onClose, onAdd }) => {
     const [supplyName, setSupplyName] = useState('');
-    const [address, setAddress] = useState('');
     const [contact, setContact] = useState('');
     const [availableProducts, setAvailableProducts] = useState([]);
     const [selectedProduct, setSelectedProduct] = useState('');
@@ -23,34 +22,46 @@ const AddItemModal = ({ isOpen, onClose, onAdd }) => {
         if (isOpen) fetchProducts();
     }, [isOpen]);
 
+    // Function to format phone number to the required format
+    const formatPhoneNumber = (phoneNumber) => {
+        // Remove non-digit characters
+        const cleaned = phoneNumber.replace(/\D/g, '');
+
+        // Format the phone number
+        return cleaned.replace(/(\d{4})(\d{3})(\d{3})/, '$1-$2-$3');
+    };
+
     const addProductToSupplier = () => {
         if (selectedProduct) {
             // Check if the product is already added
             if (!addedProducts.includes(selectedProduct)) {
                 setAddedProducts((prev) => [...prev, selectedProduct]);
-                console.log(addedProducts)
             } else {
                 alert('This product has already been added.');
             }
-            setSelectedProduct('');
+            setSelectedProduct(''); // Clear the selected product after adding
         }
     };
 
     const handleRemoveProduct = (productId) => {
-        // Remove product by filtering out the selected product from addedProducts
         setAddedProducts((prev) => prev.filter((id) => id !== productId));
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
+
+        // Format the contact number before saving
+        const formattedContact = formatPhoneNumber(contact);
+
         const newSupplier = {
             supplyName,
-            address,
-            contact,
+            contact: formattedContact, // Use the formatted contact number
             product: addedProducts,
         };
-        onAdd(newSupplier);
-        onClose();
+
+        console.log(newSupplier.contact)
+        onAdd(newSupplier); // Call the onAdd function with the formatted supplier data
+        onClose(); // Close the modal
     };
 
     if (!isOpen) return null;
@@ -65,13 +76,6 @@ const AddItemModal = ({ isOpen, onClose, onAdd }) => {
                         placeholder="Supplier Name"
                         value={supplyName}
                         onChange={(e) => setSupplyName(e.target.value)}
-                        required
-                    />
-                    <input
-                        type="text"
-                        placeholder="Address"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
                         required
                     />
                     <input

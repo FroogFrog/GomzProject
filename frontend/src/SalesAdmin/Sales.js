@@ -71,6 +71,29 @@ function Sales() {
             <div className='main-content'>
                 <div className="page-title">Preparing Orders</div>
                 <div className="info">
+                    <div className="above-table">
+                        <div className="above-table-wrapper">
+                            <button className="btn" id="sortButton">
+                                <i className="fa-solid fa-sort"></i> Sort
+                            </button>
+                        </div>
+                        <div className="search-container">
+                            <div className="search-wrapper">
+                                <label>
+                                    <i className="fa-solid fa-magnifying-glass search-icon"></i>
+                                </label>
+                                <input
+                                    type="text"
+                                    className="search-input"
+                                    placeholder="Search..."
+                                    size="40"
+                                />
+                            </div>
+                            <div>
+                                <button id="searchButton" className="btn">Search</button>
+                            </div>
+                        </div>
+                    </div>        
                     <div className="t-head">
                         <table className="table-head">
                             <thead>
@@ -78,10 +101,8 @@ function Sales() {
                                     <th>#</th>
                                     <th>Customer</th>
                                     <th>Order Date</th>
-                                    <th>Location</th>
                                     <th>Mode of Payment</th>
                                     <th>Payment Status</th>
-                                    <th>Status</th>
                                     <th>Item Name</th>
                                     <th>Quantity</th>
                                     <th>Price</th>

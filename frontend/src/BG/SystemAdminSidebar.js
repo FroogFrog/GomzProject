@@ -13,7 +13,7 @@ const Sidebar = () => {
         <li><Link to="/system-admin/dashboard"><FontAwesomeIcon icon={faHouse} /> Dashboard</Link></li>
         <li><Link to="/system-admin/document"><FontAwesomeIcon icon={faFile} /> Document</Link></li>
         <li><Link to="/system-admin/inventory"><FontAwesomeIcon icon={faBox} /> Products</Link></li>
-        <li><Link to="/system-admin/rawmaterial"><FontAwesomeIcon icon={faBoxesStacked} /> Raw Materials</Link></li>
+        <li><Link to="/system-admin/raw-material"><FontAwesomeIcon icon={faBoxesStacked} /> Raw Materials</Link></li>
         <li><Link to="/system-admin/Supplier"><FontAwesomeIcon icon={faAddressBook} /> Supplier</Link></li>
         <li><Link to="/system-admin/Supplier"><FontAwesomeIcon icon={faUsersLine} /> Account Roles</Link></li>
         <li><Link to="/system-admin/tags"><FontAwesomeIcon icon={faAddressBook} /> Tags</Link></li>

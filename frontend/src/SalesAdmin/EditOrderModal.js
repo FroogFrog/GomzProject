@@ -6,80 +6,142 @@ const EditOrderModal = ({ isOpen, onClose, order, onUpdate }) => {
     const [customerName, setCustomerName] = useState('');
     const [location, setLocation] = useState('');
     const [modeOfPayment, setModeOfPayment] = useState('');
-    const [paymentStatus, setPaymentStatus] = useState('');
+    const [paymentStatus, setPaymentStatus] = useState('unpaid');
     const [quantity, setQuantity] = useState('');
+    const [orderProducts, setOrderProducts] = useState([]);
     const [items, setItems] = useState([]);
     const [selectedItemId, setSelectedItemId] = useState('');
-    const [selectedItemPrice, setSelectedItemPrice] = useState(0); // Price of selected item
-    const [total, setTotal] = useState(0); // State for total price
+    const [selectedItemPrice, setSelectedItemPrice] = useState(0);
+    const [total, setTotal] = useState(0);
+
+    const [isOrderInitialized, setIsOrderInitialized] = useState(false);
 
     useEffect(() => {
-        if (isOpen && order) {
-            setSelectedItemId(order.itemId);
-            setCustomerName(order.customerName);
-            setLocation(order.location);
-            setModeOfPayment(order.modeOfPayment);
-            setPaymentStatus(order.paymentStatus);
-            setQuantity(order.quantity);
-            setSelectedItemPrice(order.price); // Set initial price
-            setTotal(order.price * order.quantity); // Calculate initial total
-        }
-    }, [order, isOpen]);
+        const fetchItems = async () => {
+            try {
+                const response = await axios.get('http://localhost:5000/api/items');
+                setItems(response.data);
+            } catch (error) {
+                console.error('Error fetching items:', error);
+            }
+        };
 
-    useEffect(() => {
         if (isOpen) {
-            axios.get('http://localhost:5000/api/items')
-                .then(response => {
-                    setItems(response.data);
-                })
-                .catch(error => {
-                    console.error('Error fetching items:', error);
-                });
+            fetchItems();
         }
     }, [isOpen]);
 
-    // Update the price and total when the selected item changes
     useEffect(() => {
-        const selectedItem = items.find(item => item.itemId === selectedItemId);
-        if (selectedItem) {
-            setSelectedItemPrice(selectedItem.price);
-            setTotal(quantity ? selectedItem.price * quantity : 0);
-        }
-    }, [selectedItemId, items, quantity]);
+        if (isOpen && order && items.length > 0 && !isOrderInitialized) {
+            setCustomerName(order.customerName || '');
+            setLocation(order.location || '');
+            setModeOfPayment(order.modeOfPayment || '');
+            setPaymentStatus(order.paymentStatus || 'unpaid');
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        const updatedOrder = { 
-            itemId: selectedItemId,
-            customerName,
-            date: new Date().toISOString().split('T')[0], // Use the automatically set date
-            location,
-            modeOfPayment,
-            paymentStatus,
-            price: selectedItemPrice,
-            quantity
-        };
-        onUpdate(updatedOrder);
-        // Reset all values after updating
-        setCustomerName('');
-        setLocation('');
-        setModeOfPayment('');
-        setPaymentStatus('');
-        setQuantity('');
-        setSelectedItemId('');
-        setTotal(0);
-        setSelectedItemPrice(0);
-        onClose();
+            if (order.itemNames && order.quantities) {
+                const itemNamesArray = order.itemNames.split(', ');
+                const itemQuantitiesArray = order.quantities.split(', ');
+
+                const itemsList = itemNamesArray.map((itemName, index) => {
+                    const item = items.find(item => item.itemName === itemName) || {};
+                    const quantity = itemQuantitiesArray[index] || '0';
+                    return {
+                        itemId: item.itemId || null,
+                        itemName: item.itemName || '',
+                        quantity,
+                        price: item.price || 0
+                    };
+                });
+
+                setOrderProducts(itemsList);
+                calculateTotalPrice(itemsList);
+                setIsOrderInitialized(true);
+            }
+        }
+    }, [isOpen, order, items, isOrderInitialized]);
+
+    useEffect(() => {
+        const selectedItem = items.find(item => item.itemId.toString() === selectedItemId);
+        if (selectedItem) {
+            setSelectedItemPrice(selectedItem.price || 0);
+        }
+    }, [selectedItemId, items]);
+
+    const calculateTotalPrice = (products) => {
+        const totalPrice = products.reduce((total, product) => total + (product.quantity * product.price), 0);
+        setTotal(totalPrice);
     };
 
     if (!isOpen) return null;
+
+    const addProductToOrder = () => {
+        if (selectedItemId && quantity > 0) {
+            const selectedItemIdNumber = Number(selectedItemId);
+            if (!orderProducts.some(item => item.itemId === selectedItemIdNumber)) {
+                const selectedItem = items.find(item => item.itemId === selectedItemIdNumber);
+                const product = {
+                    itemId: selectedItemIdNumber,
+                    itemName: selectedItem?.itemName || '',
+                    quantity,
+                    price: selectedItem?.price || 0,
+                };
+                const updatedProducts = [...orderProducts, product];
+                setOrderProducts(updatedProducts);
+                setQuantity('');
+                setSelectedItemId('');
+                calculateTotalPrice(updatedProducts);
+            } else {
+                alert('This product has already been added.');
+            }
+        } else {
+            alert('Please select a product and enter a quantity.');
+        }
+    };
+
+    const removeProductFromOrder = (productId) => {
+        const updatedProducts = orderProducts.filter(product => product.itemId !== productId);
+        setOrderProducts(updatedProducts);
+        calculateTotalPrice(updatedProducts);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+    
+        const updatedOrder = {
+            orderId: order.orderId,
+            customerName,
+            date: order.date || new Date().toISOString().split('T')[0],
+            price: total,
+            status: order.status || 'preparing',
+            lastUpdateDate: new Date().toISOString(),
+            location,
+            paymentStatus,
+            modeOfPayment,
+            orderProducts: orderProducts.map(product => ({
+                orderId: order.orderId,
+                itemId: product.itemId,
+                quantity: product.quantity,
+            }))
+        };
+    
+        console.log(updatedOrder.orderProducts);
+    
+        await onUpdate(updatedOrder);  // Pass updatedOrder with orderProducts inside it
+        onClose();
+        setCustomerName('');
+        setLocation('');
+        setModeOfPayment('');
+        setPaymentStatus('unpaid');
+        setOrderProducts([]);
+        console.log('Order updated successfully');
+    };
+    
 
     return (
         <div className="modal-overlay">
             <div className="modal-content">
                 <h2>Edit Order</h2>
                 <form onSubmit={handleSubmit}>
-                    
                     <input
                         type="text"
                         placeholder="Customer Name"
@@ -101,36 +163,69 @@ const EditOrderModal = ({ isOpen, onClose, order, onUpdate }) => {
                         onChange={(e) => setModeOfPayment(e.target.value)}
                         required
                     />
-                    <select 
-                        value={paymentStatus} 
-                        onChange={(e) => setPaymentStatus(e.target.value)} 
+                    <select
+                        value={paymentStatus}
+                        onChange={(e) => setPaymentStatus(e.target.value)}
                         required
                     >
-                        <option value="" disabled>Select Payment Status</option>
-                        <option value="Paid">Paid</option>
-                        <option value="Not Paid">Unpaid</option>
+                        <option value="unpaid">Unpaid</option>
+                        <option value="paid">Paid</option>
                     </select>
-                    
-                    {/* Display item name as plain text */}
-                    <div className="item-name-display">
-                        <strong>Item Name:</strong> {order.itemName || 'N/A'}
+
+                    <div className="product-selection">
+                        <select
+                            value={selectedItemId}
+                            onChange={(e) => setSelectedItemId(e.target.value)}
+                            required
+                        >
+                            <option value="">Select a Product</option>
+                            {items.map(item => (
+                                <option key={item.itemId} value={item.itemId}>
+                                    {item.itemName}
+                                </option>
+                            ))}
+                        </select>
+                        <input
+                            type="number"
+                            value={quantity}
+                            onChange={(e) => setQuantity(e.target.value)}
+                            placeholder="Quantity"
+                            required
+                        />
+                        <button type="button" onClick={addProductToOrder}>
+                            Add Product
+                        </button>
                     </div>
-                    {/* Display the price of the selected item */}
-                    <div className="price-display">
-                        <strong>Price per Unit:</strong> ₱{selectedItemPrice.toFixed(2)}
+
+                    <div className="added-products">
+                        <h4>Added Products</h4>
+                        {orderProducts.length === 0 ? (
+                            <p>No products added yet.</p>
+                        ) : (
+                            <ul>
+                                {orderProducts.map((product, index) => {
+                                    return (
+                                        <li key={index}>
+                                            {product.itemName} - {product.quantity} x ₱{product.price.toFixed(2)}
+                                            <button
+                                                type="button"
+                                                onClick={() => removeProductFromOrder(product.itemId)}
+                                                style={{ marginLeft: '10px' }}
+                                            >
+                                                Remove
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        )}
                     </div>
-                    <input
-                        type="number"
-                        placeholder="Quantity"
-                        value={quantity}
-                        onChange={(e) => setQuantity(e.target.value)}
-                        required
-                    />
-                    {/* Display the calculated total */}
-                    <div className="total-display">
-                        <strong>Total:</strong> ₱{total.toFixed(2)}
+
+                    <div className="total-price">
+                        <p>Total Price: ₱{total.toFixed(2)}</p>
                     </div>
-                    <button type="submit">Update Order</button>
+
+                    <button type="submit">Save Order</button>
                     <button type="button" onClick={onClose}>Cancel</button>
                 </form>
             </div>

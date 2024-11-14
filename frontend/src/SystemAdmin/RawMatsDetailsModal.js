@@ -6,18 +6,14 @@ function RawMatsDetailsModal({ isOpen, onClose, rawMat }) {
     const [RawMatsDetails, setRawMatsDetails] = useState([]);
 
     useEffect(() => {
-        console.log('Modal state changed: isOpen =', isOpen); // Log the open state
-         console.log('Selected rawMat:', rawMat); // Debugging log
         if (isOpen && rawMat) {
-            console.log('Selected rawMat:', rawMat); // Debugging log
             fetchRawMatsDetails(rawMat.matId); // Fetch RawMatsDetails when the modal is opened and an rawMat is selected
         }
     }, [isOpen, rawMat]);
 
     const fetchRawMatsDetails = async (matId) => {
         try {
-            const response = await axios.get(`http://localhost:5000/api/rawmats-data/${matId}`);
-            console.log('Fetched data:', response.data); // Add this to log the fetched data
+            const response = await axios.get(`http://localhost:5000/api/rawmatsinv/${matId}`);
             setRawMatsDetails(response.data);
         } catch (error) {
             console.error('Error fetching details:', error);
@@ -31,14 +27,13 @@ function RawMatsDetailsModal({ isOpen, onClose, rawMat }) {
         <div className="modal-overlay">
             <div className="modal-content">
                 <h2>Raw Materials Details for {rawMat.matName}</h2>
-                <table>
+                <table className='modal-table'>
                     <thead>
                         <tr>
                             <td>#</td>
-                            <th>Supplier</th>
+                            <th>Batch ID</th>
                             <th>Quantity</th>
                             <th>Date</th>
-                            <th>Status</th>
                             <th>Last Updated</th>
                         </tr>
                     </thead>
@@ -46,10 +41,9 @@ function RawMatsDetailsModal({ isOpen, onClose, rawMat }) {
                         {RawMatsDetails.map((detail, index) => (
                             <tr key={detail.matId}>
                                 <td>{index + 1}</td>
-                                <td>{detail.supplierName}</td>
+                                <td>{'Batch#' + detail.inventoryId}</td>
                                 <td>{detail.quantity}</td>
                                 <td>{new Date(detail.date).toLocaleDateString()}</td>
-                                <td>{detail.status}</td>
                                 <td>{new Date(detail.lastUpdated).toLocaleDateString()}</td>
                             </tr>
                         ))}

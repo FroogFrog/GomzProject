@@ -72,7 +72,7 @@ function App() {
           <Route path="/system-admin/dashboard" element={<SystemAdminDashboard />} />
           <Route path="/system-admin/document" element={<SystemAdminDocuments/>} />
           <Route path="/system-admin/inventory" element={<SystemAdminInventory />} />
-          <Route path="/system-admin/rawmaterial" element={<SystemAdminRawMaterials />} />
+          <Route path="/system-admin/raw-material" element={<SystemAdminRawMaterials />} />
           <Route path="/system-admin/supplier" element={<SystemAdminSupplier />} />
 
           <Route path="/system-admin/tags" element={<Tags />} />
@@ -82,12 +82,12 @@ function App() {
 
           <Route path="/data-admin" element={<DataAdmin />} />
           <Route path="/data-admin/dashboard" element={<DataAdminDashboard />} />
-          <Route path='/data-admin/inventory' element={<DataAdminInventory/>} />
-          <Route path='/data-admin/rawmaterial' element={<DataAdminRawMats/>} />
+          <Route path='/data-admin/product' element={<DataAdminInventory/>} />
+          <Route path='/data-admin/raw-material' element={<DataAdminRawMats/>} />
           <Route path='/data-admin/supplier' element={<DataAdminSupplier/>} />
           <Route path='/data-admin/supply-delivery' element={<DataAdminSupplyDelivery/>} />
           <Route path='/data-admin/production' element={<DataAdminProduction/>} />
-          <Route path='/data-admin/productionmateriallogs' element={<DataAdminProductionMaterialsLogs/>} />
+          <Route path='/data-admin/production-material-logs' element={<DataAdminProductionMaterialsLogs/>} />
           
 
 

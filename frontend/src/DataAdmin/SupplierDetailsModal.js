@@ -2,50 +2,50 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import '../css/AddItemModal.css'; // You can style your modal here
 
-function ItemDetailsModal({ isOpen, onClose, item }) {
-    const [ItemDetails, setItemDetails] = useState([]);
+function SupplierDetailsModal({ isOpen, onClose, supplier }) {
+    const [supplierDetails, setSupplierDetails] = useState([]);
 
     useEffect(() => {
-        if (isOpen && item) {
-            fetchItemDetails(item.itemId);
+        if (isOpen && supplier) {
+            fetchSupplierDetails(supplier.supplyId);
         }
-    }, [isOpen, item]);
+    }, [isOpen, supplier]);
 
-    const fetchItemDetails = async (itemId) => {
+    const fetchSupplierDetails = async (supplyId) => {
         try {
-            const response = await axios.get(`http://localhost:5000/api/inventory-data/${itemId}`);
-            setItemDetails(response.data);
+            const response = await axios.get(`http://localhost:5000/api/supDeli/${supplyId}`);
+            setSupplierDetails(response.data);
         } catch (error) {
-            console.error('Error fetching ItemDetails:', error);
+            console.error('Error fetching supplier details:', error);
         }
     };
 
-    if (!isOpen || !item) {
+    if (!isOpen || !supplier) {
         return null; // Don't render if the modal is not open
     }
 
     return (
         <div className="modal-overlay">
             <div className="modal-content">
-                <h2>ItemDetails for {item.itemName}</h2>
-                <table className='modal-table'>
+                <h2>Supplier Deliveries for {supplier.supplyName}</h2>
+                <table>
                     <thead>
                         <tr>
-                            <td>#</td>
-                            <td>Batch ID</td>
+                            <th>#</th>
+                            <th>Material Name</th>
                             <th>Quantity</th>
+                            <th>Cost</th>
                             <th>Date</th>
-                            <th>Last Updated</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {ItemDetails.map((detail, index) => (
-                            <tr key={detail.inventoryId}>
+                        {supplierDetails.map((detail, index) => (
+                            <tr key={detail.supDeliId}>
                                 <td>{index + 1}</td>
-                                <td>{'Batch#' + detail.inventoryId}</td>
+                                <td>{detail.matName}</td>
                                 <td>{detail.quantity}</td>
+                                <td>{detail.cost}</td>
                                 <td>{new Date(detail.date).toLocaleDateString()}</td>
-                                <td>{new Date(detail.lastUpdated).toLocaleDateString()}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -56,4 +56,4 @@ function ItemDetailsModal({ isOpen, onClose, item }) {
     );
 }
 
-export default ItemDetailsModal;
+export default SupplierDetailsModal;

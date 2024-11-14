@@ -24,6 +24,19 @@ db.connect(err => {
     console.log('MySQL connected...');
 });
 
+
+// Helper function to wrap the query in a Promise for async/await compatibility
+const queryAsync = (sql, params) => {
+    return new Promise((resolve, reject) => {
+        db.query(sql, params, (err, results) => {
+            if (err) reject(err);
+            resolve(results);
+        });
+    }); 
+};
+
+
+
 //inventory
 //getting the whole table from inventory
 app.get('/api/item', (req, res) => {
@@ -32,6 +45,7 @@ app.get('/api/item', (req, res) => {
             i.itemId,
             i.itemName,
             i.price,
+            i.quantity,
             i.category,
             i.description,
             COALESCE(SUM(p.quantityProduced), 0) AS totalQuantity  -- Total quantity from tblProduction
@@ -51,8 +65,6 @@ app.get('/api/item', (req, res) => {
         res.json(results);  // Return the results in JSON format
     });
 });
-
-
 
 //adding item in inventory
 app.post('/api/addItem', (req, res) => {
@@ -135,69 +147,88 @@ app.get('/api/inventory/:itemId', (req, res) => {
 });
 
 //get info
-app.get('/api/inventory-by-item/:itemId', (req, res) => {
-    const { itemId } = req.params;
+// app.get('/api/inventory-by-item/:itemId', (req, res) => {
+//     const { itemId } = req.params;
     
-    const sqlQuery = `
+//     const sqlQuery = `
+//         SELECT 
+//             inv.inventoryId,
+//             inv.productionId,
+//             inv.quantity,
+//             inv.status,
+//             inv.lastUpdated,
+//             p.itemId,
+//             p.quantityProduced,
+//             p.productionDate,
+//             p.staffName,
+//             i.itemName,
+//             i.price,
+//             i.category,
+//             i.description
+//         FROM 
+//             tblinventory inv 
+//         JOIN 
+//             tblproduction p ON inv.productionId = p.productionId
+//         JOIN 
+//             tblitems i ON p.itemId = i.itemId
+//         WHERE 
+//             p.itemId = ?;
+//     `;
+    
+//     db.query(sqlQuery, [itemId], (err, results) => {
+//         if (err) {
+//             console.error(err);
+//             return res.status(500).json({ error: 'Database query error' });
+//         }
+//         res.json(results);
+//     });
+// });
+
+// Route to get raw materials inventory details by matId
+app.get('/api/rawmatsinv/:matId', (req, res) => {
+    const matId = req.params.matId;
+
+    // Query to fetch raw materials details with date from tblsupdeli
+    const query = `
         SELECT 
-            inv.inventoryId,
-            inv.productionId,
-            inv.quantity,
-            inv.status,
-            inv.lastUpdated,
-            p.itemId,
-            p.quantityProduced,
-            p.productionDate,
-            p.staffName,
-            i.itemName,
-            i.price,
-            i.category,
-            i.description
-        FROM 
-            tblinventory inv 
-        JOIN 
-            tblproduction p ON inv.productionId = p.productionId
-        JOIN 
-            tblitems i ON p.itemId = i.itemId
-        WHERE 
-            p.itemId = ?;
+            tblrawmatsinv.inventoryId,
+            tblrawmatsinv.quantity,
+            tblsupdeli.date,
+            tblrawmatsinv.lastUpdated
+        FROM tblrawmatsinv
+        JOIN tblsupdeli ON tblrawmatsinv.supDeliId = tblsupdeli.supDeliId
+        WHERE tblsupdeli.matId = ?
     `;
-    
-    db.query(sqlQuery, [itemId], (err, results) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ error: 'Database query error' });
+
+    db.query(query, [matId], (error, results) => {
+        if (error) {
+            console.error("Error fetching raw materials details:", error);
+            return res.status(500).send("Server error while retrieving raw materials details.");
         }
-        res.json(results);
+        res.status(200).json(results);
     });
 });
 
-// Route to fetch combined raw materials data
-app.get('/api/rawmats-data', (req, res) => {
+// Route to get all raw materials inventory details
+app.get('/api/rawmatsinv', (req, res) => {
+    // Query to fetch all raw materials inventory details
     const query = `
         SELECT 
-            r.matId AS rawMatId,
-            r.matName AS itemName,
-            i.quantity,
-            d.cost,
-            d.date,
-            i.status,
-            i.lastUpdated,
-            (SELECT s.supplyName FROM tblsuppliers s WHERE d.supplyId = s.supplyId) AS supplierName
-        FROM 
-            tblrawmatsinv i
-        JOIN 
-            tblsupdeli d ON d.supDeliId = i.supDeliId  -- Join tblrawmatsinv with tblsupdeli using supDeliId
-        JOIN 
-            tblrawmats r ON r.matId = d.matId  -- Join tblsupdeli with tblrawmats using matId
+            tblrawmatsinv.inventoryId,
+            tblsupdeli.matId,
+            tblrawmatsinv.quantity,
+            tblsupdeli.date,
+            tblrawmatsinv.lastUpdated
+        FROM tblrawmatsinv
+        JOIN tblsupdeli ON tblrawmatsinv.supDeliId = tblsupdeli.supDeliId
     `;
 
-    db.query(query, (err, results) => {
-        if (err) {
-            console.error('Error fetching raw materials data:', err);
-            return res.status(500).json({ error: 'Internal Server Error' });
+    db.query(query, (error, results) => {
+        if (error) {
+            console.error("Error fetching raw materials inventory:", error);
+            return res.status(500).send("Server error while retrieving raw materials inventory.");
         }
-        res.json(results);
+        res.status(200).json(results);
     });
 });
 
@@ -273,6 +304,9 @@ app.put('/api/updatemats/:matId', (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Material not found' });
         }
+
+        // Send success response to frontend
+        res.json({ message: 'Raw Material updated successfully' });
     });
 });
 
@@ -290,7 +324,6 @@ app.delete('/api/deletemats/:id', (req, res) => {
             console.error('Error deleting inventory item:', err);
             return res.status(500).send('Error deleting inventory item');
         }
-        console.log('Delete result:', result); // Log the result of the deletion
         if (result.affectedRows === 0) {
             return res.status(404).send('Item not found');
         }
@@ -352,25 +385,66 @@ app.get('/api/rawmats-data/:matId', (req, res) => {
     });
 });
 
-//delete supply delivery
+
+// Deleting the supply delivery
 app.delete('/api/deleteSupDeli/:id', (req, res) => {
     const { id } = req.params;
-    const sql = 'DELETE FROM tblsupdeli WHERE supDeliId = ?';
-    
-    db.query(sql, [id], (err, result) => {
+
+    // Query to get the quantity and matId of the supply delivery to be deleted
+    const getQuantitySql = 'SELECT quantity, matId FROM tblsupdeli WHERE supDeliId = ?';
+    db.query(getQuantitySql, [id], (err, results) => {
         if (err) {
-            console.error('Error deleting supply delivery:', err);
-            return res.status(500).send('Error deleting supply delivery');
+            console.error('Error fetching supply delivery quantity:', err);
+            return res.status(500).send('Error fetching supply delivery quantity');
         }
-        
-        console.log('Delete result:', result); // Log the result of the deletion
-        if (result.affectedRows === 0) {
+
+        // Check if the supply delivery exists
+        if (results.length === 0) {
+            console.log(`No supply delivery found for ID: ${id}`);
             return res.status(404).send('Supply delivery not found');
         }
-        
-        res.send('Supply delivery deleted successfully');
+
+        const { quantity, matId } = results[0];
+
+        // Step 1: Deduct the quantity from tblrawmats
+        const updateRawMatSql = 'UPDATE tblrawmats SET quantity = quantity - ? WHERE matId = ?';
+        db.query(updateRawMatSql, [quantity, matId], (err, result) => {
+            if (err) {
+                console.error('Error updating raw materials quantity:', err);
+                return res.status(500).send('Error updating raw materials quantity');
+            }
+
+            // Step 2: Delete the corresponding row from tblrawmatsinv
+            const deleteRawMatInvSql = 'DELETE FROM tblrawmatsinv WHERE supDeliId = ?';
+            db.query(deleteRawMatInvSql, [id], (err) => {
+                if (err) {
+                    console.error('Error deleting raw materials inventory entry:', err);
+                    return res.status(500).send('Error deleting raw materials inventory entry');
+                }
+
+                // Step 3: Delete the supply delivery
+                const deleteSql = 'DELETE FROM tblsupdeli WHERE supDeliId = ?';
+                db.query(deleteSql, [id], (err, result) => {
+                    if (err) {
+                        console.error('Error deleting supply delivery:', err);
+                        return res.status(500).send('Error deleting supply delivery');
+                    }
+
+                    if (result.affectedRows === 0) {
+                        console.log(`No rows affected, supply delivery not found for ID: ${id}`);
+                        return res.status(404).send('Supply delivery not found');
+                    }
+
+                    // Successfully deleted the supply delivery, raw materials, and inventory entry
+                    res.send('Supply delivery, raw materials, and inventory entry deleted successfully');
+                });
+            });
+        });
     });
 });
+
+
+
 
 
 
@@ -382,7 +456,7 @@ app.delete('/api/deleteSupDeli/:id', (req, res) => {
 app.get('/api/supplier', async (req, res) => {
     try {
         const query = `
-            SELECT s.supplyId, s.supplyName, s.address, s.contact, 
+            SELECT s.supplyId, s.supplyName,  s.contact, 
             GROUP_CONCAT(r.matName) AS products
             FROM tblsuppliers s
             LEFT JOIN tblsupplierrawmats sr ON s.supplyId = sr.supplierId
@@ -409,7 +483,7 @@ app.get('/api/supplier/:id', async (req, res) => {
 
     try {
         const [results] = await db.query(`
-            SELECT s.supplyId, s.supplyName, s.address, s.contact, 
+            SELECT s.supplyId, s.supplyName,  s.contact, 
                    GROUP_CONCAT(r.matName) AS products
             FROM tblsuppliers s
             LEFT JOIN tblsupplierrawmats sr ON s.supplyId = sr.supplierId
@@ -433,8 +507,8 @@ app.post('/api/addsupplier', async (req, res) => {
 
     try {
         // Insert supplier first
-        const supplierQuery = `INSERT INTO tblsuppliers (supplyName, address, contact) VALUES (?, ?, ?)`;
-        const supplierValues = [supplyName, address, contact];
+        const supplierQuery = `INSERT INTO tblsuppliers (supplyName,  contact) VALUES (?, ?)`;
+        const supplierValues = [supplyName, contact];
         db.query(supplierQuery, supplierValues, (error, results) => {
             if (error) {
                 console.error("Error adding supplier: ", error);
@@ -494,9 +568,9 @@ app.get('/api/supplier/:supplierId/rawmats', (req, res) => {
 
 // Update a supplier
 app.put('/api/supplier/:id', async (req, res) => {
-    const { supplyName, address, contact, product } = req.body; // Expect product as an array
+    const { supplyName, contact, product } = req.body; // Expect product as an array
 
-    if (!supplyName || !address || !contact) {
+    if (!supplyName || !contact) {
         return res.status(400).send('All fields are required'); // Basic validation
     }
 
@@ -506,10 +580,10 @@ app.put('/api/supplier/:id', async (req, res) => {
         // Update supplier details
         const supplierQuery = `
             UPDATE tblsuppliers 
-            SET supplyName = ?, address = ?, contact = ? 
+            SET supplyName = ?, contact = ? 
             WHERE supplyId = ?
         `;
-        const supplierValues = [supplyName, address, contact, supplierId];
+        const supplierValues = [supplyName, contact, supplierId];
 
         db.query(supplierQuery, supplierValues, (error, results) => {
             if (error) {
@@ -645,7 +719,9 @@ app.get('/api/supDeli', async (req, res) => {
         const query = `
             SELECT sd.supDeliId, sd.supplyId, rm.matName, sd.quantity, sd.cost, sd.date 
             FROM tblSupDeli sd 
-            JOIN tblrawmats rm ON sd.matId = rm.matId`; // Adjust table names and fields as needed
+            JOIN tblrawmats rm ON sd.matId = rm.matId
+            ORDER BY 
+                sd.date DESC`; // Adjust table names and fields as needed
         db.query(query, (error, results) => {
             if (error) {
                 console.error("Error fetching supply deliveries: ", error);
@@ -666,10 +742,23 @@ app.get('/api/supDeli/:id', async (req, res) => {
 
     try {
         const query = `
-            SELECT sd.supDeliId, sd.supplyId, rm.matName, sd.quantity, sd.cost, sd.date 
-            FROM tblSupDeli sd 
-            JOIN tblrawmats rm ON sd.matId = rm.matId
-            WHERE sd.supplyId = ?`; // Add the WHERE clause to filter by supplyId
+            SELECT 
+                sd.supDeliId, 
+                sd.supplyId, 
+                rm.matName, 
+                sd.quantity, 
+                sd.cost, 
+                sd.date 
+            FROM 
+                tblSupDeli sd 
+            JOIN 
+                tblrawmats rm ON sd.matId = rm.matId
+            WHERE 
+                sd.supplyId = ?
+            ORDER BY 
+                sd.date DESC;
+            `
+            ; // Add the WHERE clause to filter by supplyId
 
         // Pass the supplyId as a parameter to the query
         db.query(query, [supplyId], (error, results) => {
@@ -779,37 +868,68 @@ app.get('/api/getrawmaterials/:supplierId', (req, res) => {
     });
 });
 
-
-
-
 // Add supply delivery
 app.post('/api/addsupplydelivery', (req, res) => {
-    const { supplyId, matId, quantity, cost, date } = req.body; // Changed itemName to matId
-
-    console.log("Received delivery data:", req.body);
+    const { supplyId, matId, quantity, cost, date } = req.body;
 
     // Check if any required fields are missing
-    if (!supplyId || !matId || !quantity || !cost || !date) { // Adjusted here
+    if (!supplyId || !matId || !quantity || !cost || !date) {
         console.error("Missing fields in the request body");
         return res.status(400).send("Bad Request: Missing required fields");
     }
 
-    const query = `
+    // Query to insert the new supply delivery into tblSupDeli
+    const insertQuery = `
         INSERT INTO tblSupDeli (supplyId, matId, quantity, cost, date) 
         VALUES (?, ?, ?, ?, ?)
     `;
-    const values = [supplyId, matId, quantity, cost, date]; // Adjusted here
+    const insertValues = [supplyId, matId, quantity, cost, date];
 
-    db.query(query, values, (error, results) => {
+    db.query(insertQuery, insertValues, (error, results) => {
         if (error) {
-            console.error("Error executing SQL query:", error);
+            console.error("Error executing SQL insert query:", error);
             return res.status(500).send("Server Error");
         } else {
-            console.log("Supply delivery added successfully:", results);
-            res.status(200).send("Supply delivery added successfully.");
+            const supDeliId = results.insertId; // Get the newly inserted supDeliId
+
+            // Update the quantity in tblrawmats
+            const updateQuery = `
+                UPDATE tblrawmats 
+                SET quantity = quantity + ? 
+                WHERE matid = ?
+            `;
+            const updateValues = [quantity, matId];
+
+            db.query(updateQuery, updateValues, (updateError, updateResults) => {
+                if (updateError) {
+                    console.error("Error updating quantity in tblrawmats:", updateError);
+                    return res.status(500).send("Server Error: Failed to update raw materials quantity.");
+                } else {
+
+                    // Insert into tblrawmatsinv using the new supDeliId
+                    const insertRawMatsInvQuery = `
+                        INSERT INTO tblrawmatsinv (supDeliId, quantity, lastUpdated) 
+                        VALUES (?, ?, NOW()) 
+                    `;
+                    const insertRawMatsInvValues = [supDeliId, quantity];
+
+                    db.query(insertRawMatsInvQuery, insertRawMatsInvValues, (invError, invResults) => {
+                        if (invError) {
+                            console.error("Error inserting into tblrawmatsinv:", invError);
+                            return res.status(500).send("Server Error: Failed to insert into tblrawmatsinv.");
+                        } else {
+                            res.status(200).send("Supply delivery added, raw materials quantity updated, and inventory record inserted into tblrawmatsinv.");
+                        }
+                    });
+                }
+            });
         }
     });
 });
+
+
+
+
 
 
 
@@ -833,27 +953,116 @@ app.get('/api/supplydelivery/:deliveryId', (req, res) => {
     });
 });
 
-// Update a supply delivery
-app.put('/api/updatesupplydelivery/:deliveryId', (req, res) => {
-    const { deliveryId } = req.params;
-    const { supplyId, itemName, quantity, cost, date } = req.body;
+app.put('/api/updatesupplydelivery/:supDeliId', (req, res) => {
+    const { supDeliId } = req.params; // The supply delivery ID from the URL parameter
+    const { supplyId, matId, quantity, cost } = req.body; // Extracting values from the request body
 
-    const query = `
-        UPDATE tblSupDeli 
-        SET supplyId = ?, itemName = ?, quantity = ?, cost = ?, date = ?
-        WHERE supDeliId = ?
+    // Query to get the original quantity of the supply delivery
+    const getOriginalQuantityQuery = `
+        SELECT quantity FROM tblSupDeli WHERE supDeliId = ?;
     `;
-    const values = [supplyId, itemName, quantity, cost, date, deliveryId];
 
-    db.query(query, values, (error, results) => {
+    // Query to update the supply delivery record in tblSupDeli
+    const updateDeliveryQuery = `
+        UPDATE tblSupDeli 
+        SET supplyId = ?, matId = ?, quantity = ?, cost = ? 
+        WHERE supDeliId = ?;
+    `;
+
+    // Query to update the quantity of raw materials in tblRawMats
+    const updateRawMatsQuery = `
+        UPDATE tblRawMats 
+        SET quantity = quantity + ? 
+        WHERE matId = ?;
+    `;
+
+    // Query to update the raw materials inventory in tblrawmatsinv
+    const updateRawMatsInvQuery = `
+        UPDATE tblrawmatsinv
+        SET quantity = quantity + ?, lastupdated = NOW()
+        WHERE supDeliId = ?;
+    `;
+
+    // Get the original quantity of the supply delivery to calculate the difference
+    db.query(getOriginalQuantityQuery, [supDeliId], (error, results) => {
         if (error) {
-            console.error('Error updating supply delivery:', error);
-            res.status(500).send("Server Error");
-        } else {
-            res.status(200).send("Supply delivery updated successfully.");
+            console.error('Error fetching original quantity:', error);
+            return res.status(500).send("Server Error");
         }
+
+        const originalQuantity = results[0]?.quantity;
+        if (originalQuantity === undefined) {
+            return res.status(404).send("Supply delivery not found.");
+        }
+
+        const quantityDifference = quantity - originalQuantity;
+
+        // Step 1: Update the supply delivery record
+        db.query(updateDeliveryQuery, [supplyId, matId, quantity, cost, supDeliId], (error) => {
+            if (error) {
+                console.error('Error updating supply delivery:', error);
+                return res.status(500).send("Error updating supply delivery");
+            }
+
+            // Step 2: Update the raw materials quantity in tblRawMats
+            db.query(updateRawMatsQuery, [quantityDifference, matId], (error) => {
+                if (error) {
+                    console.error('Error updating raw materials quantity:', error);
+                    return res.status(500).send("Error updating raw materials quantity");
+                }
+
+                // Step 3: Update the raw materials inventory in tblrawmatsinv
+                db.query(updateRawMatsInvQuery, [quantityDifference, supDeliId], (error) => {
+                    if (error) {
+                        console.error('Error updating raw materials inventory:', error);
+                        return res.status(500).send("Error updating raw materials inventory");
+                    }
+
+                    // Successfully updated the supply delivery, raw materials, and inventory
+                    res.status(200).send("Supply delivery, raw materials, and inventory updated successfully.");
+                });
+            });
+        });
     });
 });
+
+
+
+// GET: Fetch inventory details for a specific item
+app.get('/api/inventory-data/:itemId', async (req, res) => {
+    const itemId = req.params.itemId;
+
+    try {
+        // Query to retrieve only the required inventory details for the specified itemId
+        const query = `
+            SELECT 
+                inv.inventoryId, 
+                inv.quantity, 
+                prod.productionDate AS date, 
+                inv.lastUpdated
+            FROM 
+                tblinventory AS inv
+            JOIN 
+                tblProduction AS prod ON inv.productionId = prod.productionId
+            WHERE 
+                prod.itemId = ?
+            ORDER BY 
+                inv.lastUpdated DESC
+        `;
+
+        db.query(query, [itemId], (error, results) => {
+            if (error) {
+                console.error('Error fetching inventory details:', error);
+                return res.status(500).json({ error: 'Database query error' });
+            }
+            res.status(200).json(results);
+        });
+    } catch (error) {
+        console.error('Server error fetching inventory details:', error);
+        res.status(500).send('Server error');
+    }
+});
+
 
 
 
@@ -898,7 +1107,7 @@ app.get('/api/categories/rawMaterials', (req, res) => {
 
 // GET: Fetch all production records
 app.get('/api/production', (req, res) => {
-    const query = 'SELECT * FROM tblproduction';
+    const query = 'SELECT * FROM tblproduction order by productiondate desc';
     db.query(query, (err, results) => {
         if (err) return res.status(500).send(err);
         res.json(results);
@@ -916,149 +1125,248 @@ app.get('/api/production/:id', (req, res) => {
 });
 
 // POST: Add a new production record
-app.post('/api/addProduction', async (req, res) => {
+app.post('/api/addProduction', (req, res) => {
     const { itemId, quantityProduced, staffName } = req.body;
     const productionDate = new Date(); // Automatically set to today's date
 
-    try {
-        const sql = 'INSERT INTO tblProduction (itemId, quantityProduced, staffName, productionDate) VALUES (?, ?, ?, ?)';
-        await db.query(sql, [itemId, quantityProduced, staffName, productionDate]);
-        res.status(200).send('Production record added successfully');
-    } catch (error) {
-        console.error('Error adding production:', error);
-        res.status(500).send('Error adding production');
-    }
-});
+    // Start a transaction
+    db.beginTransaction((err) => {
+        if (err) {
+            console.error('Transaction start error:', err);
+            return res.status(500).send('Transaction error');
+        }
 
-
-// PUT: Update a production record by productionId
-app.post('/api/addProduction', (req, res) => {
-    const { itemId, quantityProduced, productionDate, staffName } = req.body;
-
-    // Insert into tblProduction
-    const productionQuery = `
-        INSERT INTO tblproduction (itemId, quantityProduced, productionDate, staffName)
-        VALUES (?, ?, ?, ?)
-    `;
-    db.query(productionQuery, [itemId, quantityProduced, productionDate, staffName], (err, result) => {
-        if (err) return res.status(500).send(err);
-
-        const productionId = result.insertId;  // Get the inserted productionId
-
-        // Insert into tblInventory based on the production record
-        const inventoryQuery = `
-            INSERT INTO tblInventory (productionId, status)
-            VALUES (?, Available)
+        // Insert the new production record
+        const insertProductionSql = `
+            INSERT INTO tblProduction (itemId, quantityProduced, staffName, productionDate) 
+            VALUES (?, ?, ?, ?)
         `;
-        db.query(inventoryQuery, [productionId, status], (err, inventoryResult) => {
-            if (err) return res.status(500).send(err);
+        db.query(insertProductionSql, [itemId, quantityProduced, staffName, productionDate], (insertError, productionResult) => {
+            if (insertError) {
+                return db.rollback(() => {
+                    console.error('Error during production insertion:', insertError);
+                    res.status(500).send('Error adding production');
+                });
+            }
 
-            res.json({ message: 'Production and inventory records added successfully!' });
+            const productionId = productionResult.insertId; // Get the generated productionId
+
+            // Update the quantity in tblItems
+            const updateItemsSql = `
+                UPDATE tblItems 
+                SET quantity = quantity + ? 
+                WHERE itemId = ?
+            `;
+            db.query(updateItemsSql, [quantityProduced, itemId], (updateError) => {
+                if (updateError) {
+                    return db.rollback(() => {
+                        console.error('Error during quantity update in tblItems:', updateError);
+                        res.status(500).send('Error updating item quantity');
+                    });
+                }
+
+                // Insert the production record into tblinventory
+                const insertInventorySql = `
+                    INSERT INTO tblinventory (productionId, quantity, lastUpdated)
+                    VALUES (?, ?, NOW())
+                `;
+                db.query(insertInventorySql, [productionId, quantityProduced], (inventoryError) => {
+                    if (inventoryError) {
+                        return db.rollback(() => {
+                            console.error('Error inserting into tblinventory:', inventoryError);
+                            res.status(500).send('Error adding to inventory');
+                        });
+                    }
+
+                    // Commit the transaction
+                    db.commit((commitErr) => {
+                        if (commitErr) {
+                            console.error('Transaction commit error:', commitErr);
+                            return res.status(500).send('Transaction error');
+                        }
+                        res.status(200).send('Production record added, item quantity updated, and inventory updated successfully');
+                    });
+                });
+            });
         });
     });
 });
 
-// DELETE: Delete a production record by productionId
-app.delete('/api/production/:id', (req, res) => {
-    const { id } = req.params;
-    const query = 'DELETE FROM tblproduction WHERE productionId = ?';
-    db.query(query, [id], (err, result) => {
-        if (err) return res.status(500).send(err);
-        if (result.affectedRows === 0) {
+// Update Production and Adjust Item Quantity in tblItems and tblinventory
+app.put('/api/updateProduction/:productionId', async (req, res) => {
+    const { productionId } = req.params;
+    const { itemId, quantityProduced, staffName } = req.body;
+
+    if (!itemId || !quantityProduced || !staffName) {
+        return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    const sqlGetOldQuantity = `
+        SELECT quantityProduced
+        FROM tblProduction
+        WHERE productionId = ?;
+    `;
+
+    const sqlUpdateProduction = `
+        UPDATE tblProduction
+        SET itemId = ?, quantityProduced = ?, staffName = ?
+        WHERE productionId = ?;
+    `;
+
+    const sqlUpdateItem = `
+        UPDATE tblItems
+        SET quantity = quantity + ?
+        WHERE itemId = ?;
+    `;
+
+    const sqlUpdateInventory = `
+        UPDATE tblinventory
+        SET quantity = ?, lastUpdated = NOW()
+        WHERE productionId = ?;
+    `;
+
+    try {
+        // Step 1: Fetch the old production quantity
+        const oldQuantityResults = await queryAsync(sqlGetOldQuantity, [productionId]);
+
+        if (oldQuantityResults.length === 0) {
             return res.status(404).json({ message: 'Production record not found' });
         }
-        res.json({ message: 'Production record deleted successfully!' });
-    });
+
+        const oldQuantityProduced = oldQuantityResults[0].quantityProduced;
+
+        // Step 2: Calculate the difference in quantity (new - old)
+        const quantityDifference = quantityProduced - oldQuantityProduced;
+
+        // Step 3: Update the production record
+        await queryAsync(sqlUpdateProduction, [itemId, quantityProduced, staffName, productionId]);
+
+        // Step 4: Update the item quantity in tblItems
+        await queryAsync(sqlUpdateItem, [quantityDifference, itemId]);
+
+        // Step 5: Update the inventory record in tblinventory
+        await queryAsync(sqlUpdateInventory, [quantityProduced, productionId]);
+
+        res.status(200).json({ message: 'Production, item quantity, and inventory updated successfully' });
+
+    } catch (err) {
+        console.error('Error updating production, item quantity, and inventory:', err);
+        res.status(500).json({ message: 'Error updating production, item quantity, and inventory' });
+    }
 });
+
+// DELETE: Delete a production record by productionId
+app.delete('/api/production/:id', async (req, res) => {
+    const { id } = req.params;
+
+    // Query to get the itemId and quantity of the production record before deleting it
+    const sqlGetQuantity = 'SELECT itemId, quantityProduced FROM tblProduction WHERE productionId = ?';
+
+    // Query to delete the production record
+    const sqlDeleteProduction = 'DELETE FROM tblProduction WHERE productionId = ?';
+
+    // Query to update the item quantity in tblItems
+    const sqlUpdateItem = 'UPDATE tblItems SET quantity = quantity - ? WHERE itemId = ?';
+
+    // Query to delete the corresponding inventory record in tblinventory
+    const sqlDeleteInventory = 'DELETE FROM tblinventory WHERE productionId = ?';
+
+    try {
+        // Step 1: Fetch the itemId and quantity of the production record
+        const productionResults = await queryAsync(sqlGetQuantity, [id]);
+
+        if (productionResults.length === 0) {
+            return res.status(404).json({ message: 'Production record not found' });
+        }
+
+        const { itemId, quantityProduced } = productionResults[0];
+
+        // Step 2: Delete the production record from tblProduction
+        await queryAsync(sqlDeleteProduction, [id]);
+
+        // Step 3: Update the item quantity in tblItems by subtracting the deleted quantity
+        await queryAsync(sqlUpdateItem, [quantityProduced, itemId]);
+
+        // Step 4: Delete the corresponding record in tblinventory
+        await queryAsync(sqlDeleteInventory, [id]);
+
+        res.json({ message: 'Production record and inventory entry deleted, and item quantity updated successfully!' });
+    } catch (err) {
+        console.error('Error deleting production, updating item quantity, and deleting inventory record:', err);
+        res.status(500).json({ message: 'Error deleting production, updating item quantity, and deleting inventory record' });
+    }
+});
+
 
 
 // Combined Data API Endpoint for 
-app.get('/api/combined-data', (req, res) => {
-    const sqlQuery = `
-        SELECT 
-            p.productionId,
-            i.itemName,
-            inv. quantity,
-            p.productionDate AS date,
-            p.staffName AS staff,
-            inv.status,
-            inv.lastUpdated
-        FROM 
-            tblproduction p
-        JOIN 
-            tblinventory inv ON p.productionId = inv.productionId
-        JOIN 
-            tblitems i ON p.itemId = i.itemId;
-    `;
+// app.get('/api/combined-data', (req, res) => {
+//     const sqlQuery = `
+//         SELECT 
+//             p.productionId,
+//             i.itemName,
+//             inv. quantity,
+//             p.productionDate AS date,
+//             p.staffName AS staff,
+//             inv.status,
+//             inv.lastUpdated
+//         FROM 
+//             tblproduction p
+//         JOIN 
+//             tblinventory inv ON p.productionId = inv.productionId
+//         JOIN 
+//             tblitems i ON p.itemId = i.itemId;
+//     `;
 
-    db.query(sqlQuery, (err, results) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ error: 'Database query error' });
-        }
-        res.json(results);
-    });
-});
+//     db.query(sqlQuery, (err, results) => {
+//         if (err) {
+//             console.error(err);
+//             return res.status(500).json({ error: 'Database query error' });
+//         }
+//         res.json(results);
+//     });
+// });
 
-app.get('/api/combined-data/:itemId', (req, res) => {
-    const { itemId } = req.params;
-    const sqlQuery = `
-        SELECT 
-            p.productionId,
-            i.itemName,
-            inv.quantity,
-            p.productionDate AS date,
-            p.staffName AS staff,
-            inv.status,
-            inv.lastUpdated
-        FROM 
-            tblproduction p
-        JOIN 
-            tblinventory inv ON p.productionId = inv.productionId
-        JOIN 
-            tblitems i ON p.itemId = i.itemId
-        WHERE 
-            i.itemId = ?;
-    `;
 
-    db.query(sqlQuery, [itemId], (err, results) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ error: 'Database query error' });
-        }
-        res.json(results);
-    });
-});
 
 
 
 //sales admin
 //order
-// Fetch all orders
+// Route to get all orders with product details
 app.get('/api/orders', (req, res) => {
     const query = `
         SELECT 
             o.orderId, 
-            o.quantity, 
             o.customerName, 
             o.date, 
             o.location, 
             o.modeOfPayment, 
             o.paymentStatus, 
             o.status, 
-            o.price,
-            i.itemName
+            o.price, 
+            GROUP_CONCAT(i.itemName SEPARATOR ', ') AS itemNames,
+            GROUP_CONCAT(op.quantity SEPARATOR ', ') AS quantities
         FROM 
-            tblorders o
-        JOIN 
-            tblItems i ON o.itemId = i.itemId
+            tblorders AS o
+        LEFT JOIN 
+            tblorderproducts AS op ON o.orderId = op.orderId
+        LEFT JOIN 
+            tblItems AS i ON op.itemId = i.itemId
+        GROUP BY 
+            o.orderId
+        ORDER BY 
+            o.date DESC;
+
     `;
 
-    db.query(query, (error, results) => {
-        if (error) {
-            return res.status(500).json({ error: 'Database query failed' });
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error('Error fetching orders:', err);
+            res.status(500).json({ message: 'Failed to fetch orders' });
+        } else {
+            res.json(results);
         }
-        res.json(results);
     });
 });
 
@@ -1073,20 +1381,157 @@ app.get('/api/items', (req, res) => {
     });
 });
 
-/// Route to add a new order
+// Route to add a new order
 app.post('/api/orders', (req, res) => {
-    const { itemId, customerName, date, location, modeOfPayment, paymentStatus, price, quantity } = req.body;
-
-    // SQL query to insert a new order with quantity
-    const query = 'INSERT INTO tblorders (itemId, customerName, date, location, modeOfPayment, status, paymentStatus, price, quantity) VALUES (?, ?, ?, ?, ?, "preparing", ?, ?, ?)';
-    db.query(query, [itemId, customerName, date, location, modeOfPayment, paymentStatus, price, quantity], (error, results) => {
-        if (error) {
-            console.error('Error adding order:', error);
-            return res.status(500).json({ error: 'An error occurred while adding the order.' });
+    const { customerName, date, price, status, lastUpdateDate, location, paymentStatus, modeOfPayment, orderProducts } = req.body;
+      
+    // Check if orderProducts is an array
+    if (!Array.isArray(orderProducts)) {
+      return res.status(400).send('orderProducts must be an array');
+    }
+  
+    // 1. Insert the order into tblorders
+    const orderQuery = `
+      INSERT INTO tblorders (customerName, date, price, status, lastUpdateDate, location, paymentStatus, modeOfPayment)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    
+    const orderData = [
+      customerName,
+      date,
+      price,
+      status,
+      lastUpdateDate,
+      location,
+      paymentStatus,
+      modeOfPayment,
+    ];
+  
+    db.query(orderQuery, orderData, (err, result) => {
+      if (err) {
+        console.error('Error inserting order:', err);
+        return res.status(500).send('Error inserting order');
+      }
+  
+      // Get the orderId (this will be the ID of the newly inserted order)
+      const orderId = result.insertId;
+  
+      // 2. Insert each product into tblorderproducts
+      const orderProductsQuery = `
+        INSERT INTO tblorderproducts (orderId, itemId, quantity)
+        VALUES ?
+      `;
+      
+      const orderProductsData = orderProducts.map(product => [
+        orderId, // The orderId we just inserted
+        product.itemId,
+        product.quantity
+      ]);
+  
+      // Insert the order products into the database
+      db.query(orderProductsQuery, [orderProductsData], (err, result) => {
+        if (err) {
+          console.error('Error inserting order products:', err);
+          return res.status(500).send('Error inserting order products');
         }
-        res.status(201).json({ message: 'Order added successfully', orderId: results.insertId });
+  
+        // Success response
+        res.status(201).send({ message: 'Order added successfully' });
+      });
+    });
+  });
+  
+// Route to update an existing order
+app.put('/api/orders/:orderId', (req, res) => {
+    const { orderId } = req.params;
+    const { customerName, date, price, status, lastUpdateDate, location, paymentStatus, modeOfPayment, orderProducts } = req.body;
+
+    // Validate the incoming data
+    if (!orderId || !customerName || !date || !price || !status || !lastUpdateDate || !location || !paymentStatus || !modeOfPayment) {
+        return res.status(400).send('Missing required fields');
+    }
+
+    // 1. Update the order details in tblorders
+    const updateOrderQuery = `
+        UPDATE tblorders 
+        SET customerName = ?, date = ?, price = ?, status = ?, lastUpdateDate = ?, 
+            location = ?, paymentStatus = ?, modeOfPayment = ? 
+        WHERE orderId = ?`;
+
+    const updateOrderData = [
+        customerName,
+        date,
+        price,
+        status,
+        lastUpdateDate,
+        location,
+        paymentStatus,
+        modeOfPayment,
+        orderId
+    ];
+
+    db.query(updateOrderQuery, updateOrderData, (err, result) => {
+        if (err) {
+            console.error('Error updating order:', err);
+            return res.status(500).send('Error updating order');
+        }
+
+        // 2. Delete all products associated with the orderId in tblorderproducts
+        const deleteProductsQuery = `DELETE FROM tblorderproducts WHERE orderId = ?`;
+        db.query(deleteProductsQuery, [orderId], (err, result) => {
+            if (err) {
+                console.error('Error deleting products:', err);
+                return res.status(500).send('Error deleting products');
+            }
+
+            // 3. Add the updated order products
+            if (orderProducts && orderProducts.length > 0) {
+                const insertProductsQuery = `INSERT INTO tblorderproducts (orderId, itemId, quantity) VALUES ?`;
+                const insertProductsData = orderProducts.map(product => [orderId, product.itemId, product.quantity]);
+
+                db.query(insertProductsQuery, [insertProductsData], (err, result) => {
+                    if (err) {
+                        console.error('Error inserting products:', err);
+                        return res.status(500).send('Error inserting products');
+                    }
+
+                    res.status(200).send('Order updated successfully');
+                });
+            } else {
+                // No products to insert, just respond
+                res.status(200).send('Order updated successfully');
+            }
+        });
     });
 });
+
+// Route to delete an order
+app.delete('/api/orders/:orderId', (req, res) => {
+    const orderId = req.params.orderId;
+
+    const deleteOrderQuery = `DELETE FROM tblorders WHERE orderId = ?`;
+    const deleteOrderProductsQuery = `DELETE FROM tblorderproducts WHERE orderId = ?`;
+
+    db.query(deleteOrderProductsQuery, [orderId], (err) => {
+        if (err) {
+            console.error('Error deleting order products:', err);
+            return res.status(500).send('Error deleting order products');
+        }
+
+        db.query(deleteOrderQuery, [orderId], (err) => {
+            if (err) {
+                console.error('Error deleting order:', err);
+                return res.status(500).send('Error deleting order');
+            }
+            res.send({ message: 'Order deleted successfully' });
+        });
+    });
+});
+
+
+
+
+
 
 // Route to update an existing order
 app.put('/api/orders/:orderId', (req, res) => {
@@ -1114,10 +1559,11 @@ app.put('/api/orders/:orderId', (req, res) => {
     });
 });
 
+
 app.get('/api/preparingOrders', async (req, res) => {
     try {
         // Base query to select orders with status 'preparing'
-        const query = 'SELECT * FROM tblorders WHERE status = "preparing"';
+        const query = 'SELECT * FROM tblorders WHERE status = "preparing" order by tblorders.date';
         
         db.query(query, (err, results) => {
             if (err) {
@@ -1135,7 +1581,7 @@ app.get('/api/preparingOrders', async (req, res) => {
 app.get('/api/deliveryOrders', async (req, res) => {
     try {
         // Base query to select orders with status 'on delivery'
-        const query = 'SELECT * FROM tblorders WHERE status = "on delivery"';
+        const query = 'SELECT * FROM tblorders WHERE status = "on delivery" order by tblorders.date';
         
         db.query(query, (err, results) => {
             if (err) {
@@ -1153,7 +1599,7 @@ app.get('/api/deliveryOrders', async (req, res) => {
 app.get('/api/sales', async (req, res) => {
     try {
         // Base query to select orders with status 'delivered'
-        const query = 'SELECT * FROM tblorders WHERE status = "delivered"';
+        const query = 'SELECT * FROM tblorders WHERE status = "delivered " order by tblorders.date';
         
         db.query(query, (err, results) => {
             if (err) {
@@ -1171,7 +1617,7 @@ app.get('/api/sales', async (req, res) => {
 app.get('/api/cancelled', async (req, res) => {
     try {
         // Base query to select orders with status 'cancelled'
-        const query = 'SELECT * FROM tblorders WHERE status = "cancelled"';
+        const query = 'SELECT * FROM tblorders WHERE status = "cancelled" order by tblorders.date';
         
         db.query(query, (err, results) => {
             if (err) {
@@ -1204,6 +1650,7 @@ app.delete('/api/orders/:id', (req, res) => {
 
 //production mats logs
 // Fetch all production material logs
+// Fetch production material logs
 app.get('/api/production-material-logs', (req, res) => {
     const query = `
         SELECT 
@@ -1211,7 +1658,8 @@ app.get('/api/production-material-logs', (req, res) => {
             logs.dateLogged, 
             logs.description, 
             GROUP_CONCAT(mats.matName SEPARATOR ', ') AS matNames,
-            GROUP_CONCAT(logMats.quantity SEPARATOR ', ') AS quantities
+            GROUP_CONCAT(logMats.quantity SEPARATOR ', ') AS quantities,
+            GROUP_CONCAT(logMats.inventoryId SEPARATOR ', ') AS batchNumbers
         FROM 
             tblProductionMaterialLogs logs
         LEFT JOIN 
@@ -1220,7 +1668,6 @@ app.get('/api/production-material-logs', (req, res) => {
             tblRawMats mats ON logMats.matId = mats.matId
         GROUP BY 
             logs.logId;
-
     `;
 
     db.query(query, (error, results) => {
@@ -1231,6 +1678,7 @@ app.get('/api/production-material-logs', (req, res) => {
         res.json(results);
     });
 });
+
 
 // Add production material log
 app.post('/api/addproductionlog', async (req, res) => {
@@ -1252,21 +1700,77 @@ app.post('/api/addproductionlog', async (req, res) => {
             // Now insert the material-log associations into tblmatlogsmats
             if (materials && materials.length > 0) {
                 // Ensure all materials are valid and present in tblrawmats
-                const validMaterials = materials.filter(m => m.materialId); // Filter out invalid materials
-                
+                const validMaterials = materials.filter(m => m.materialId && m.inventoryId); // Filter out invalid materials
+
                 if (validMaterials.length > 0) {
                     const materialLogQuery = `
-                        INSERT INTO tblmatlogsmats (logId, matId, quantity) 
-                        VALUES ${validMaterials.map(() => "(?, ?, ?)").join(", ")}
+                        INSERT INTO tblmatlogsmats (logId, matId, inventoryId, quantity) 
+                        VALUES ${validMaterials.map(() => "(?, ?, ?, ?)").join(", ")}
                     `;
-                    const materialLogValues = validMaterials.flatMap(m => [newLogId, m.materialId, m.quantity]);
+                    const materialLogValues = validMaterials.flatMap(m => [newLogId, m.materialId, m.inventoryId, m.quantity]);
 
                     db.query(materialLogQuery, materialLogValues, (err) => {
                         if (err) {
                             console.error("Error adding materials to production log: ", err);
                             return res.status(500).send("Server Error");
                         }
-                        res.send("Production log and materials added successfully");
+
+                        // Update the quantities in tblrawmatsinv and tblrawmats after materials have been added to tblmatlogsmats
+                        const updatePromises = validMaterials.map((material) => {
+                            return new Promise((resolve, reject) => {
+                                // Update tblrawmatsinv
+                                const updateRawMatInvQuery = `
+                                    UPDATE tblrawmatsinv
+                                    SET quantity = quantity - ?
+                                    WHERE inventoryId = ? AND quantity >= ?
+                                `;
+                                const updateRawMatInvValues = [material.quantity, material.inventoryId, material.quantity];
+
+                                db.query(updateRawMatInvQuery, updateRawMatInvValues, (updateInvError, updateInvResults) => {
+                                    if (updateInvError) {
+                                        console.error("Error updating raw material inventory quantity: ", updateInvError);
+                                        return reject(updateInvError);
+                                    }
+
+                                    if (updateInvResults.affectedRows === 0) {
+                                        console.warn(`Inventory ID ${material.inventoryId} has insufficient quantity.`);
+                                        return reject(`Inventory ID ${material.inventoryId} has insufficient quantity.`);
+                                    }
+
+                                    // Update tblrawmats based on matId
+                                    const updateRawMatQuery = `
+                                        UPDATE tblrawmats
+                                        SET quantity = quantity - ?
+                                        WHERE matId = ? AND quantity >= ?
+                                    `;
+                                    const updateRawMatValues = [material.quantity, material.materialId, material.quantity];
+
+                                    db.query(updateRawMatQuery, updateRawMatValues, (updateMatError, updateMatResults) => {
+                                        if (updateMatError) {
+                                            console.error("Error updating raw materials quantity: ", updateMatError);
+                                            return reject(updateMatError);
+                                        }
+
+                                        if (updateMatResults.affectedRows === 0) {
+                                            console.warn(`Mat ID ${material.materialId} has insufficient quantity.`);
+                                            return reject(`Mat ID ${material.materialId} has insufficient quantity.`);
+                                        }
+
+                                        resolve();
+                                    });
+                                });
+                            });
+                        });
+
+                        // Execute all update promises and send a response after all updates are complete
+                        Promise.all(updatePromises)
+                            .then(() => {
+                                res.send("Production log and materials added successfully, and quantities updated.");
+                            })
+                            .catch((updateError) => {
+                                console.error("Error updating raw materials inventory: ", updateError);
+                                res.status(500).send("Error updating raw materials inventory due to insufficient quantities.");
+                            });
                     });
                 } else {
                     res.status(400).send("No valid materials provided.");
@@ -1281,12 +1785,23 @@ app.post('/api/addproductionlog', async (req, res) => {
     }
 });
 
-// Edit production material log
+
+
+
 app.post('/api/updateproductionlog', async (req, res) => {
     const { description, dateLogged, materials, logId } = req.body;
 
     try {
-        // Step 1: Update the production log entry in tblproductionmateriallogs
+        // Step 1: Get existing materials for the log
+        const existingMaterialsQuery = `SELECT matId, quantity, inventoryId FROM tblmatlogsmats WHERE logId = ?`;
+        const [existingMaterials] = await new Promise((resolve, reject) => {
+            db.query(existingMaterialsQuery, [logId], (error, results) => {
+                if (error) return reject(error);
+                resolve([results]);
+            });
+        });
+
+        // Step 2: Update the production log entry in tblproductionmateriallogs
         const logQuery = `UPDATE tblproductionmateriallogs SET description = ?, dateLogged = ? WHERE logId = ?`;
         const logValues = [description, dateLogged || new Date().toISOString().split('T')[0], logId];
 
@@ -1296,45 +1811,191 @@ app.post('/api/updateproductionlog', async (req, res) => {
                 return res.status(500).send("Server Error");
             }
 
-            // Step 2: Remove existing materials from tblmatlogsmats
-            const deleteQuery = `DELETE FROM tblmatlogsmats WHERE logId = ?`;
-            db.query(deleteQuery, [logId], (deleteError) => {
-                if (deleteError) {
-                    console.error("Error deleting existing materials: ", deleteError);
-                    return res.status(500).send("Server Error");
-                }
-
-                // Step 3: Insert updated materials into tblmatlogsmats
-                if (materials && materials.length > 0) {
-                    const validMaterials = materials.filter(m => m.matId && !isNaN(m.quantity)); // Ensure valid materials
-
-                    if (validMaterials.length > 0) {
-                        const materialLogQuery = `
-                            INSERT INTO tblmatlogsmats (logId, matId, quantity)
-                            VALUES ${validMaterials.map(() => "(?, ?, ?)").join(", ")}
-                        `;
-                        const materialLogValues = validMaterials.flatMap(m => [logId, m.matId, m.quantity]);
-
-                        db.query(materialLogQuery, materialLogValues, (err) => {
-                            if (err) {
-                                console.error("Error adding materials to updated production log: ", err);
-                                return res.status(500).send("Server Error");
-                            }
-                            res.send("Production log and materials updated successfully");
-                        });
-                    } else {
-                        res.status(400).send("No valid materials provided.");
-                    }
-                } else {
-                    res.send("Production log updated without materials.");
-                }
+            // Step 3: Add old quantities back to tblrawmats (resetting old log quantities)
+            const rawMatResetPromises = existingMaterials.map(({ matId, quantity }) => {
+                return new Promise((resolve, reject) => {
+                    const addOldQuantityQuery = `
+                        UPDATE tblrawmats
+                        SET quantity = quantity + ?
+                        WHERE matId = ?`;
+                    db.query(addOldQuantityQuery, [quantity, matId], (error) => {
+                        if (error) return reject(error);
+                        resolve();
+                    });
+                });
             });
+
+            // Step 4: Update tblrawmatsinv by adding the old materials (using inventoryId)
+            const rawMatInvResetPromises = existingMaterials.map(({ inventoryId, quantity }) => {
+                return new Promise((resolve, reject) => {
+                    const addOldQuantityToInvQuery = `
+                        UPDATE tblrawmatsinv
+                        SET quantity = quantity + ?
+                        WHERE inventoryId = ?`;
+                    db.query(addOldQuantityToInvQuery, [quantity, inventoryId], (error) => {
+                        if (error) return reject(error);
+                        resolve();
+                    });
+                });
+            });
+
+            // Execute all reset promises
+            Promise.all([...rawMatResetPromises, ...rawMatInvResetPromises])
+                .then(() => {
+                    // Step 5: Remove existing materials from tblmatlogsmats
+                    const deleteQuery = `DELETE FROM tblmatlogsmats WHERE logId = ?`;
+                    db.query(deleteQuery, [logId], (deleteError) => {
+                        if (deleteError) {
+                            console.error("Error deleting existing materials: ", deleteError);
+                            return res.status(500).send("Server Error");
+                        }
+
+                        // Step 6: Insert updated materials into tblmatlogsmats
+                        if (materials && materials.length > 0) {
+                            const validMaterials = materials.filter(m => m.matId && !isNaN(m.quantity));
+                            if (validMaterials.length > 0) {
+                                const materialLogQuery = `
+                                    INSERT INTO tblmatlogsmats (logId, matId, quantity, inventoryId)
+                                    VALUES ${validMaterials.map(() => "(?, ?, ?, ?)").join(", ")}`;
+                                const materialLogValues = validMaterials.flatMap(m => [logId, m.matId, m.quantity, m.inventoryId]);
+
+                                db.query(materialLogQuery, materialLogValues, (err) => {
+                                    if (err) {
+                                        console.error("Error adding materials to updated production log: ", err);
+                                        return res.status(500).send("Server Error");
+                                    }
+
+                                    // Step 7: Subtract new quantities from tblrawmats
+                                    const rawMatSubtractPromises = validMaterials.map(({ matId, quantity }) => {
+                                        return new Promise((resolve, reject) => {
+                                            const subtractNewQuantityQuery = `
+                                                UPDATE tblrawmats
+                                                SET quantity = quantity - ?
+                                                WHERE matId = ?`;
+                                            db.query(subtractNewQuantityQuery, [quantity, matId], (error) => {
+                                                if (error) return reject(error);
+                                                resolve();
+                                            });
+                                        });
+                                    });
+
+                                    // Step 8: Update tblrawmatsinv by subtracting the new materials (using inventoryId)
+                                    const rawMatInvSubtractPromises = validMaterials.map(({ inventoryId, quantity }) => {
+                                        return new Promise((resolve, reject) => {
+                                            const subtractNewQuantityFromInvQuery = `
+                                                UPDATE tblrawmatsinv
+                                                SET quantity = quantity - ?
+                                                WHERE inventoryId = ?`;
+                                            db.query(subtractNewQuantityFromInvQuery, [quantity, inventoryId], (error) => {
+                                                if (error) return reject(error);
+                                                resolve();
+                                            });
+                                        });
+                                    });
+
+                                    // Execute all subtraction promises
+                                    Promise.all([...rawMatSubtractPromises, ...rawMatInvSubtractPromises])
+                                        .then(() => res.send("Production log and materials updated successfully"))
+                                        .catch(error => {
+                                            console.error("Error updating raw materials: ", error);
+                                            res.status(500).send("Server Error");
+                                        });
+                                });
+                            } else {
+                                res.status(400).send("No valid materials provided.");
+                            }
+                        } else {
+                            res.send("Production log updated without materials.");
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error("Error updating raw materials in tblrawmats and tblrawmatsinv: ", error);
+                    res.status(500).send("Server Error");
+                });
         });
     } catch (error) {
         console.error("Error updating production log: ", error);
         res.status(500).send("Server Error");
     }
 });
+
+
+
+
+
+
+// Delete material log and update raw materials
+app.delete('/api/deletemateriallog/:logId', async (req, res) => {
+    const { logId } = req.params;
+
+    try {
+        // Step 1: Retrieve materials associated with the log
+        const getMaterialsQuery = `SELECT matId, quantity, inventoryId FROM tblmatlogsmats WHERE logId = ?`;
+        const [materials] = await new Promise((resolve, reject) => {
+            db.query(getMaterialsQuery, [logId], (error, results) => {
+                if (error) return reject(error);
+                resolve([results]);
+            });
+        });
+
+        if (materials.length === 0) {
+            return res.status(404).send('No materials found for this log');
+        }
+
+        // Step 2: Update tblrawmats quantities based on removed materials
+        const rawMatUpdates = materials.map(({ matId, quantity }) => new Promise((resolve, reject) => {
+            const updateRawMatQuery = `
+                UPDATE tblrawmats
+                SET quantity = quantity + ?
+                WHERE matId = ?`;
+            db.query(updateRawMatQuery, [quantity, matId], (error) => {
+                if (error) return reject(error);
+                resolve();
+            });
+        }));
+
+        // Step 3: Update tblrawmatsinv by adding the old quantity back (using inventoryId)
+        const rawMatInvUpdates = materials.map(({ inventoryId, quantity }) => new Promise((resolve, reject) => {
+            const updateRawMatInvQuery = `
+                UPDATE tblrawmatsinv
+                SET quantity = quantity + ?
+                WHERE inventoryId = ?`;
+            db.query(updateRawMatInvQuery, [quantity, inventoryId], (error) => {
+                if (error) return reject(error);
+                resolve();
+            });
+        }));
+
+        // Wait for all raw materials and raw materials inventory updates to complete
+        await Promise.all([...rawMatUpdates, ...rawMatInvUpdates]);
+
+        // Step 4: Delete associated materials from tblmatlogsmats
+        const deleteMaterialsQuery = `DELETE FROM tblmatlogsmats WHERE logId = ?`;
+        await new Promise((resolve, reject) => {
+            db.query(deleteMaterialsQuery, [logId], (error) => {
+                if (error) return reject(error);
+                resolve();
+            });
+        });
+
+        // Step 5: Delete the production log entry from tblproductionmateriallogs
+        const deleteLogQuery = `DELETE FROM tblproductionmateriallogs WHERE logId = ?`;
+        await new Promise((resolve, reject) => {
+            db.query(deleteLogQuery, [logId], (error) => {
+                if (error) return reject(error);
+                resolve();
+            });
+        });
+
+        res.send("Production log and associated materials deleted successfully");
+    } catch (error) {
+        console.error("Error deleting material log: ", error);
+        res.status(500).send("Server Error");
+    }
+});
+
+
 
 
 
@@ -1363,77 +2024,102 @@ app.post('/api/updateproductionlog', async (req, res) => {
 //all the dashboard for quickchart
 
 //sales order  per day summary
-app.get('/api/sales/summary', async (req, res) => {
-    try {
-        const { range, startDate, endDate } = req.query;
+app.get('/api/sales/summary', (req, res) => {
+    const { range, startDate, endDate } = req.query;
 
-        let query = '';
-        if (range === 'week') {
-            // Current Week query (Monday to Sunday)
-            query = `
-                SELECT 
-                    DAYNAME(date) AS day_of_week,
-                    COUNT(*) AS order_count
-                FROM 
-                    tblorders
-                WHERE 
-                    status = "delivered" 
-                    AND date >= CURDATE() - INTERVAL WEEKDAY(CURDATE()) DAY
-                    AND date < CURDATE() + INTERVAL (6 - WEEKDAY(CURDATE())) DAY
-                GROUP BY 
-                    DAYNAME(date)
-                ORDER BY 
-                    FIELD(DAYNAME(date), 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday');
-            `;
-        } else if (range === 'month') {
-            // Current Month query
-            query = `
-                SELECT 
-                    DAY(date) AS day_of_month,
-                    COUNT(*) AS order_count
-                FROM 
-                    tblorders
-                WHERE 
-                    status = "delivered" 
-                    AND MONTH(date) = MONTH(CURDATE()) 
-                    AND YEAR(date) = YEAR(CURDATE())
-                GROUP BY 
-                    DAY(date)
-                ORDER BY 
-                    DAY(date);
-            `;
-        }
+    let query = '';
+    let queryParams = []; // Initialize query parameters array
 
-        // If startDate and endDate are provided (for custom range), adjust the query
-        if (startDate && endDate) {
-            query = `
-                SELECT 
-                    DAY(date) AS day_of_month,
-                    COUNT(*) AS order_count
-                FROM 
-                    tblorders
-                WHERE 
-                    status = "delivered" 
-                    AND DATE(date) BETWEEN ? AND ?
-                GROUP BY 
-                    DAY(date)
-                ORDER BY 
-                    DAY(date);
-            `;
-        }
+    if (range === 'week') {
+        // Query for "This Week" range
+        query = `
+            SELECT 
+                WEEKDAY(date) AS day_of_week,  -- 0 = Monday, 1 = Tuesday, ..., 6 = Sunday
+                COUNT(*) AS order_count
+            FROM 
+                tblorders
+            WHERE 
+                status = "delivered" 
+                AND date >= CURDATE() - INTERVAL WEEKDAY(CURDATE()) DAY  -- Start from the most recent Monday
+                AND date < CURDATE() + INTERVAL (7 - WEEKDAY(CURDATE())) DAY  -- Extend to the upcoming Sunday (inclusive)
+            GROUP BY 
+                WEEKDAY(date)
+            ORDER BY 
+                WEEKDAY(date);
 
-        db.query(query, [startDate, endDate], (err, results) => {
-            if (err) {
-                console.error('Error fetching order summary:', err);
-                return res.status(500).json({ error: 'Error fetching order summary' });
-            }
-            res.json(results); // Send the summarized results as JSON
-        });
-    } catch (error) {
-        console.error('Server error:', error);
-        res.status(500).json({ message: 'Server error' });
+        `;
     }
+
+    if (range === 'month') {
+        // Query for "This Month" range
+        query = `
+            SELECT 
+                DAY(date) AS day_of_month,  -- Get the day of the month
+                COUNT(*) AS order_count
+            FROM 
+                tblorders
+            WHERE 
+                status = "delivered" 
+                AND MONTH(date) = MONTH(CURDATE()) 
+                AND YEAR(date) = YEAR(CURDATE())
+            GROUP BY 
+                DAY(date)
+            ORDER BY 
+                DAY(date);
+        `;
+    }
+
+    if (range === 'year') {
+        // Query for "This Year" range
+        query = `
+            SELECT 
+                MONTH(date) AS month_of_year,  -- Get the month of the year
+                COUNT(*) AS order_count
+            FROM 
+                tblorders
+            WHERE 
+                status = "delivered" 
+                AND YEAR(date) = YEAR(CURDATE())
+            GROUP BY 
+                MONTH(date)
+            ORDER BY 
+                MONTH(date);
+        `;
+    }
+
+    if (range === 'custom') {
+        // Query for custom date range
+        query = `
+            SELECT 
+                DAY(date) AS day_of_month,  -- Get the day of the month
+                COUNT(*) AS order_count
+            FROM 
+                tblorders
+            WHERE 
+                status = "delivered" 
+                AND DATE(date) BETWEEN ? AND ?
+            GROUP BY 
+                DAY(date)
+            ORDER BY 
+                DAY(date);
+        `;
+        queryParams = [startDate, endDate]; // Add startDate and endDate to query parameters
+    }
+
+    // Execute the query
+    db.query(query, queryParams, (err, results) => {
+        if (err) {
+            console.error('Error executing query:', err);
+            return res.status(500).json({ error: 'Database query failed' });
+        }
+
+        // Send the results back as JSON
+        res.json(results);
+    });
 });
+
+
+
 
 
 

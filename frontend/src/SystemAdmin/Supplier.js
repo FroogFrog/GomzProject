@@ -4,11 +4,13 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Header from '../BG/SystemAdminHeader';
 import Sidebar from '../BG/SystemAdminSidebar';
-import AddSupplierModal from './AddSupplierModal'; // Import your AddItemModal
-import EditSupplierModal from './EditSupplierModal'; // Import your EditItemModal
-import SupplierDetailsModal from './SupplierDetailsModal'; // Import the SupplierDetailsModal
-import DeleteModal from './DeleteModal'; // Import DeleteModal component
+import AddSupplierModal from './AddSupplierModal'; 
+import EditSupplierModal from './EditSupplierModal'; 
+import SupplierDetailsModal from './SupplierDetailsModal'; 
+import DeleteModal from './DeleteModal'; 
+import { ToastContainer, toast } from 'react-toastify';  // Import ToastContainer and toast
 import '@fortawesome/fontawesome-free/css/all.min.css';
+import 'react-toastify/dist/ReactToastify.css';  // Import Toastify styles
 
 function Supplier() {
     const [supplier, setSupplier] = useState([]);
@@ -16,71 +18,71 @@ function Supplier() {
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [isDetailsModalOpen, setDetailsModalOpen] = useState(false);
     const [selectedSupplier, setSelectedSupplier] = useState(null);
-    const [isDeleteModalOpen, setDeleteModalOpen] = useState(false); // State for delete modal
-    const [itemToDelete, setItemToDelete] = useState(null); // Item to delete
+    const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortConfig, setSortConfig] = useState({ key: 'supplyName', direction: 'asc' });
     const navigate = useNavigate();
 
     const fetchData = async () => {
         try {
             const response = await axios.get('http://localhost:5000/api/supplier');
-            
-            
-            
-            // No need for JSON.parse, just use the product field as is
             const suppliersWithParsedProduct = response.data.map(supplier => ({
                 ...supplier,
-                product: supplier.product || 'No products' // Handle missing products
+                product: supplier.product || 'No products'
             }));
-
             setSupplier(suppliersWithParsedProduct);
         } catch (error) {
             console.error('Error fetching data:', error);
+            toast.error('Failed to fetch suppliers.');  // Error toast for fetch
         }
     };
 
     const addSupplier = async (newSupplier) => {
         try {
-            const response = await axios.post('http://localhost:5000/api/addsupplier', newSupplier); // Change this line
+            await axios.post('http://localhost:5000/api/addsupplier', newSupplier);
             fetchData();
+            toast.success('Supplier added successfully!');  // Success toast
         } catch (error) {
-            console.error('Error adding supplier:', error); // Log the error
+            console.error('Error adding supplier:', error);
+            toast.error('Failed to add supplier.');  // Error toast
         }
     };
 
     const updateSupplier = async (updatedSupplier) => {
         try {
-            const response = await axios.put(`http://localhost:5000/api/supplier/${updatedSupplier.supplyId}`, updatedSupplier);
+            await axios.put(`http://localhost:5000/api/supplier/${updatedSupplier.supplyId}`, updatedSupplier);
             fetchData();
+            toast.success('Supplier updated successfully!');  // Success toast
         } catch (error) {
             console.error('Error updating supplier:', error);
+            toast.error('Failed to update supplier.');  // Error toast
         }
     };
 
     const deleteSupplier = async (id) => {
         try {
-            const response = await axios.delete(`http://localhost:5000/api/deletesupplier/${id}`);
+            await axios.delete(`http://localhost:5000/api/deletesupplier/${id}`);
             fetchData();
+            toast.success('Supplier deleted successfully!');  // Success toast
         } catch (error) {
             console.error('Error deleting supplier:', error);
+            toast.error('Failed to delete supplier.');  // Error toast
         }
     };
 
     const handleDeleteConfirm = async () => {
         if (itemToDelete) {
-            await deleteSupplier(itemToDelete.supplyId); // Call deleteItem with the itemId
+            await deleteSupplier(itemToDelete.supplyId);
         }
-        setDeleteModalOpen(false); // Close the modal after deletion
-        setItemToDelete(null); // Clear the item to delete
-    };    
-
-    const confirmDeleteItem = (supply) => {
-        setItemToDelete(supply); // Set the item to be deleted
-        setDeleteModalOpen(true); // Open the delete modal
+        setDeleteModalOpen(false);
+        setItemToDelete(null);
     };
 
-    useEffect(() => {
-        fetchData();
-    }, []);
+    const confirmDeleteItem = (supply) => {
+        setItemToDelete(supply);
+        setDeleteModalOpen(true);
+    };
 
     const handleEditClick = (supplier) => {
         setSelectedSupplier(supplier);
@@ -89,8 +91,34 @@ function Supplier() {
 
     const openDetailsModal = (supplier) => {
         setSelectedSupplier(supplier);
-        setDetailsModalOpen(true); // Open the modal
+        setDetailsModalOpen(true);
     };
+
+    const handleSort = (column) => {
+        let direction = 'asc';
+        if (sortConfig.key === column && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key: column, direction });
+    };
+
+    const sortedSuppliers = supplier
+        .filter(supply => 
+            supply.supplyName.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        .sort((a, b) => {
+            if (a[sortConfig.key] < b[sortConfig.key]) {
+                return sortConfig.direction === 'asc' ? -1 : 1;
+            }
+            if (a[sortConfig.key] > b[sortConfig.key]) {
+                return sortConfig.direction === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+
+    useEffect(() => {
+        fetchData();
+    }, []);
 
     return (
         <div className="container">
@@ -104,7 +132,7 @@ function Supplier() {
                             <button className="btn" onClick={() => setAddModalOpen(true)}>
                                 <i className="fa-solid fa-add"></i> Add
                             </button>
-                            <button className="btn" id="sortButton">
+                            <button className="btn" id="sortButton" onClick={() => handleSort('supplyName')}>
                                 <i className="fa-solid fa-sort"></i> Sort
                             </button>
                         </div>
@@ -116,12 +144,11 @@ function Supplier() {
                                 <input
                                     type="text"
                                     className="search-input"
-                                    placeholder="Search..."
+                                    placeholder="Search by name or contact..."
                                     size="40"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
                                 />
-                            </div>
-                            <div>
-                                <button id="searchButton" className="btn">Search</button>
                             </div>
                         </div>
                     </div>
@@ -129,10 +156,9 @@ function Supplier() {
                         <table className="table-head">
                             <thead>
                                 <tr>
-                                    <th>#</th>
-                                    <th>Name</th>
-                                    <th>Address</th>
-                                    <th>Contact No.</th>
+                                    <th onClick={() => handleSort('supplyId')}>#</th>
+                                    <th onClick={() => handleSort('supplyName')}>Name</th>
+                                    <th onClick={() => handleSort('contact')}>Contact No.</th>
                                     <th>Product</th>
                                     <th>Actions</th>
                                 </tr>
@@ -142,11 +168,10 @@ function Supplier() {
                     <div className="table-list">
                         <table>
                             <tbody>
-                                {supplier.map((supply, index) => (
+                                {sortedSuppliers.map((supply, index) => (
                                     <tr key={supply.supplyId}>
                                         <td>{index + 1}</td>
                                         <td>{supply.supplyName}</td>
-                                        <td>{supply.address}</td>
                                         <td>{supply.contact}</td>
                                         <td>{supply.products || 'No products'}</td>
                                         <td>
@@ -156,7 +181,7 @@ function Supplier() {
                                             <button className="btn" onClick={() => confirmDeleteItem(supply)}>
                                                 <i className="fa-solid fa-trash-can"></i>
                                             </button>
-                                            <button className="btn" onClick={() => handleEditClick(supply)}>
+                                            <button className="edit-btn" onClick={() => handleEditClick(supply)}>
                                                 <i className="fa-solid fa-pen-to-square"></i>
                                             </button>
                                         </td>
@@ -182,17 +207,21 @@ function Supplier() {
                 supplier={selectedSupplier} 
                 onUpdate={updateSupplier} 
             />
+
             <DeleteModal
-                    isOpen={isDeleteModalOpen}
-                    onClose={() => setDeleteModalOpen(false)}
-                    onConfirm={handleDeleteConfirm}
+                isOpen={isDeleteModalOpen}
+                onClose={() => setDeleteModalOpen(false)}
+                onConfirm={handleDeleteConfirm}
             />
             {/* Supplier Details Modal */}
             <SupplierDetailsModal
                 isOpen={isDetailsModalOpen}
                 onClose={() => setDetailsModalOpen(false)}
-                supplier={selectedSupplier} // Pass the selected supplier
+                supplier={selectedSupplier} 
             />
+
+            {/* Toast Container */}
+            <ToastContainer position="top-right" autoClose={3000} />
         </div>
     );
 }

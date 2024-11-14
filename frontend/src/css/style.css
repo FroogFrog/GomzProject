@@ -260,7 +260,9 @@ body {
 .table-head th:nth-child(5),
 .table-head th:nth-child(6),
 .table-head th:nth-child(7),
-.table-head th:nth-child(8) {
+.table-head th:nth-child(8),
+.table-head th:nth-child(9),
+.table-head th:nth-child(10)  {
   width: 150px; /* Equal width for the rest of the columns */
   text-align: center;
 }
@@ -307,13 +309,27 @@ tr:hover {
 .table-list td:nth-child(5),
 .table-list td:nth-child(6),
 .table-list td:nth-child(7),
-.table-list td:nth-child(8) {
+.table-list td:nth-child(8),
+.table-list td:nth-child(9),
+.table-list td:nth-child(10) {
   width: 150px; /* Equal width for the rest of the columns */
   text-align: center;
 }
 
-.edit-btn {
+.done-btn {
   background-color:#32CD32; 
+  color: white; 
+  padding: 10px 20px; 
+  border: none; 
+  border-radius: 5px; 
+  cursor: pointer; 
+  font-size: 16px;
+  text-align: center;
+  width: 50px;
+}
+
+.edit-btn {
+  background-color:#1E90FF; 
   color: white; 
   padding: 10px 20px; 
   border: none; 
@@ -749,3 +765,47 @@ select:hover {
 
 
 
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;  /* Add margin at the top */
+  padding: 10px;
+  background-color: #f1f1f1;  /* Light background color for better visibility */
+  border-radius: 5px;  /* Rounded corners */
+}
+
+.pagination button {
+  background-color: #007bff;  /* Blue background color for buttons */
+  color: white;  /* White text */
+  border: none;
+  padding: 10px 20px;
+  margin: 0 10px;  /* Space between buttons */
+  cursor: pointer;
+  border-radius: 5px;  /* Rounded corners for buttons */
+  font-size: 16px;
+}
+
+.pagination button:disabled {
+  background-color: #cccccc;  /* Gray color for disabled buttons */
+  cursor: not-allowed;  /* Show not-allowed cursor for disabled buttons */
+}
+
+.pagination button:hover:not(:disabled) {
+  background-color: #0056b3;  /* Darker blue when hovered */
+}
+
+.pagination span {
+  font-size: 16px;
+  color: #333;  /* Dark text color for the page number display */
+  margin: 0 10px;  /* Space between text and buttons */
+}
+
+
+th {
+  cursor: pointer;
+}
+
+th i {
+  margin-left: 5px; /* Space between the column name and the arrow icon */
+}

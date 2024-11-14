@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
+import { toast } from 'react-toastify'; // Import toast for notifications
 import '../css/AddItemModal.css'; // You can style your modal here
-
 
 function AddProductionModal({ isOpen, onClose, items, onAdd }) {
     const [production, setProduction] = useState({
@@ -18,15 +18,19 @@ function AddProductionModal({ isOpen, onClose, items, onAdd }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
+            // Send POST request to add production
             await axios.post('http://localhost:5000/api/addProduction', production);
-            onAdd(); // Refresh the data
-            onClose(); // Close the modal
+            
+            toast.success('Production record added successfully!'); // Show success toast
+            onAdd(); // Refresh the data (fetch the updated item list)
+            onClose(); // Close the modal after submission
         } catch (error) {
+            toast.error('Failed to add production record!'); // Show error toast
             console.error('Error adding production:', error);
         }
     };
 
-    if (!isOpen) return null; // Return null if not open
+    if (!isOpen) return null; // Return null if modal is not open
 
     return (
         <div id="addModal" className="modal-overlay">
@@ -67,7 +71,7 @@ function AddProductionModal({ isOpen, onClose, items, onAdd }) {
                 </form>
             </div>
         </div>
-    )
+    );
 }
 
 export default AddProductionModal;

@@ -15,12 +15,12 @@ function ProductionMaterialsLogs() {
     const [isAddModalOpen, setAddModalOpen] = useState(false);
     const [isUpdateModalOpen, setUpdateModalOpen] = useState(false);
     const [logToUpdate, setLogToUpdate] = useState(null);
+    const [sortOrder, setSortOrder] = useState('asc'); // 'asc' or 'desc' for sorting order
 
-    // Fetch logs from the backend
+    // Fetch logs from backend
     const fetchLogs = async () => {
         try {
             const response = await axios.get('http://localhost:5000/api/production-material-logs');
-            
             setLogs(response.data);
         } catch (error) {
             console.error('Error fetching production material logs:', error);
@@ -31,44 +31,51 @@ function ProductionMaterialsLogs() {
         fetchLogs();
     }, []);
 
-    // Handle search input change
     const handleSearchChange = (e) => setSearch(e.target.value);
 
-    // Filter logs based on search input
-    const filteredLogs = logs.filter((log) =>
-        (log.itemName && log.itemName.toLowerCase().includes(search.toLowerCase())) ||
-        (log.description && log.description.toLowerCase().includes(search.toLowerCase()))
-    );
-
-    // Open add log modal
-    const handleAddLogClick = () => {
-        setAddModalOpen(true);
+    // Sorting function
+    const sortLogsByDate = () => {
+        const sortedLogs = [...logs].sort((a, b) => {
+            const dateA = new Date(a.dateLogged);
+            const dateB = new Date(b.dateLogged);
+            return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+        });
+        setLogs(sortedLogs);
+        setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); // Toggle sorting order
     };
 
-    // Open update log modal
+    // Filter logs based on search input (Description field only)
+    const filteredLogs = logs.filter((log) =>
+        log.description && log.description.toLowerCase().includes(search.toLowerCase())
+    );
+
+    const handleAddLogClick = () => setAddModalOpen(true);
+
     const handleEditLogClick = (log) => {
         setLogToUpdate(log);
         setUpdateModalOpen(true);
     };
 
-    // Open delete log modal
     const handleDeleteLogClick = (log) => {
         setItemToDelete(log);
         setDeleteModalOpen(true);
     };
 
-    // Handle log deletion
     const handleDeleteLog = async () => {
+        if (!itemToDelete) return;
+
+        console.log('Deleting log:', itemToDelete);  // Add this line for debugging
+
         try {
             await axios.delete(`http://localhost:5000/api/deletemateriallog/${itemToDelete.logId}`);
             fetchLogs();
             setDeleteModalOpen(false);
         } catch (error) {
             console.error('Error deleting log:', error);
+            alert('Failed to delete the log. Please try again.');
         }
     };
 
-    // Handle new log added
     const handleLogAdded = async (newLog) => {
         try {
             await axios.post('http://localhost:5000/api/addproductionlog', newLog);
@@ -80,25 +87,16 @@ function ProductionMaterialsLogs() {
         }
     };
 
-    // Handle log update
     const handleLogUpdated = async (updatedLog) => {
-        console.log('Submitting updated log:', updatedLog);
         try {
-            const response = await axios.post('http://localhost:5000/api/updateproductionlog', updatedLog);
-            console.log('Update response:', response.data); // Log the response data from the server
-            fetchLogs();  // Refresh the logs after updating
-            setUpdateModalOpen(false);  // Close the update modal
+            await axios.post('http://localhost:5000/api/updateproductionlog', updatedLog);
+            fetchLogs();
+            setUpdateModalOpen(false);
         } catch (error) {
-            if (error.response) {
-                console.error('Error response from server:', error.response.data);
-            } else {
-                console.error('Error updating production log:', error);
-            }
+            console.error('Error updating production log:', error);
             alert('Failed to update production log. Please try again.');
         }
     };
-    
-    
 
     return (
         <div className="container">
@@ -112,9 +110,6 @@ function ProductionMaterialsLogs() {
                             <button className="btn" onClick={handleAddLogClick}>
                                 <i className="fa-solid fa-add"></i> Add
                             </button>
-                            <button className="btn" id="sortButton">
-                                <i className="fa-solid fa-sort"></i> Sort
-                            </button>
                         </div>
                         <div className="search-container">
                             <div className="search-wrapper">
@@ -124,13 +119,10 @@ function ProductionMaterialsLogs() {
                                 <input
                                     type="text"
                                     className="search-input"
-                                    placeholder="Search..."
+                                    placeholder="Search by description..."
                                     size="40"
                                     onChange={handleSearchChange}
                                 />
-                            </div>
-                            <div>
-                                <button id="searchButton" className="btn">Search</button>
                             </div>
                         </div>
                     </div>
@@ -140,7 +132,7 @@ function ProductionMaterialsLogs() {
                                 <tr>
                                     <th>#</th>
                                     <th>Description</th>
-                                    <th>Date Logged</th>
+                                    <th onClick={sortLogsByDate}>Date</th>
                                     <th>Materials Used</th>
                                     <th>Actions</th>
                                 </tr>
@@ -156,11 +148,12 @@ function ProductionMaterialsLogs() {
                                     </tr>
                                 ) : (
                                     filteredLogs.map((log, index) => {
-                                        // Split matNames and quantities to create an array of objects
                                         const materialNames = log.matNames ? log.matNames.split(', ') : [];
                                         const materialQuantities = log.quantities ? log.quantities.split(', ') : [];
+                                        const materialBatchNumbers = log.batchNumbers ? log.batchNumbers.split(', ') : [];
                                         const materialsArray = materialNames.map((name, i) => ({
                                             matName: name,
+                                            batchNumber: materialBatchNumbers[i] || 'Unknown batch',
                                             quantity: materialQuantities[i] || 'Unknown quantity',
                                         }));
 
@@ -174,7 +167,7 @@ function ProductionMaterialsLogs() {
                                                         <ul>
                                                             {materialsArray.map((material, i) => (
                                                                 <li key={i}>
-                                                                    {material.matName} ({material.quantity})
+                                                                    {material.matName} - Batch#{material.batchNumber} ({material.quantity})
                                                                 </li>
                                                             ))}
                                                         </ul>
@@ -216,7 +209,7 @@ function ProductionMaterialsLogs() {
             <DeleteModal 
                 isOpen={isDeleteModalOpen} 
                 onClose={() => setDeleteModalOpen(false)} 
-                onDelete={handleDeleteLog} 
+                onConfirm={handleDeleteLog} 
             />
         </div>
     );

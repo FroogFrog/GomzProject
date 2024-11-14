@@ -4,7 +4,6 @@ import axios from 'axios';
 
 function EditSupplierModal({ isOpen, onClose, supplier, onUpdate }) {
     const [supplyName, setSupplyName] = useState('');
-    const [address, setAddress] = useState('');
     const [contact, setContact] = useState('');
     const [availableProducts, setAvailableProducts] = useState([]);
     const [selectedProduct, setSelectedProduct] = useState('');
@@ -42,7 +41,6 @@ function EditSupplierModal({ isOpen, onClose, supplier, onUpdate }) {
 
         if (supplier) {
             setSupplyName(supplier.supplyName || '');
-            setAddress(supplier.address || '');
             setContact(supplier.contact || '');
             fetchSupplierProducts(); // Fetch and set added products
         }
@@ -70,7 +68,6 @@ function EditSupplierModal({ isOpen, onClose, supplier, onUpdate }) {
         const updatedSupplier = {
             ...supplier,
             supplyName,
-            address,
             contact,
             product: addedProducts, // Save updated products list
         };
@@ -90,13 +87,6 @@ function EditSupplierModal({ isOpen, onClose, supplier, onUpdate }) {
                         placeholder="Supplier Name"
                         value={supplyName}
                         onChange={(e) => setSupplyName(e.target.value)}
-                        required
-                    />
-                    <input
-                        type="text"
-                        placeholder="Address"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
                         required
                     />
                     <input

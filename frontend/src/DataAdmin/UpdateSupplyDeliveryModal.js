@@ -1,36 +1,35 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import '../css/AddItemModal.css'; // You can style your modal here
+import { ToastContainer, toast } from 'react-toastify'; // Import ToastContainer and toast
+import 'react-toastify/dist/ReactToastify.css'; // Import CSS for Toastify
+import '../css/AddItemModal.css';
 
 function UpdateSupplyDeliveryModal({ isOpen, onClose, suppliers, items, setItems, deliveryId, onUpdate }) {
     const [delivery, setDelivery] = useState({
         supplyId: '',
-        itemName: '',
+        matId: '',
         quantity: '',
         cost: '',
-        date: '',
+        date: '', // Date field managed in the background only
     });
 
-    const suppliersLoaded = useRef(false);
     const initialFetchComplete = useRef(false);
-
-    const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        return date.toISOString().split('T')[0];
-    };
 
     useEffect(() => {
         if (isOpen && deliveryId && !initialFetchComplete.current) {
             const fetchDelivery = async () => {
                 try {
-                    console.log("Fetching delivery for ID:", deliveryId); // Log delivery ID being fetched
                     const response = await axios.get(`http://localhost:5000/api/supplydelivery/${deliveryId}`);
-                    console.log("Fetched delivery response:", response.data); // Log fetched delivery data
-                    setDelivery({
+                    const fetchedDelivery = {
                         ...response.data,
-                        date: formatDate(response.data.date),
-                    });
+                    };
+                    setDelivery(fetchedDelivery);
                     initialFetchComplete.current = true;
+
+                    // Fetch raw materials based on the fetched supplyId
+                    if (fetchedDelivery.supplyId) {
+                        handleSupplierChange({ target: { value: fetchedDelivery.supplyId } }, fetchedDelivery.matId);
+                    }
                 } catch (error) {
                     console.error('Error fetching delivery:', error);
                 }
@@ -39,51 +38,43 @@ function UpdateSupplyDeliveryModal({ isOpen, onClose, suppliers, items, setItems
         }
     }, [isOpen, deliveryId]);
 
-    useEffect(() => {
-        if (suppliers.length > 0 && delivery.supplyId && !suppliersLoaded.current) {
-            handleSupplierChange({ target: { value: delivery.supplyId } });
-            suppliersLoaded.current = true;
-        }
-    }, [suppliers, delivery.supplyId]);
+    const handleSupplierChange = async (event, preselectedMatId = null) => {
+        const selectedSupplyId = event.target.value;
+        setDelivery(prevState => ({ ...prevState, supplyId: selectedSupplyId, matId: '' }));
 
-    const handleSupplierChange = async (event) => {
-        const { value } = event.target;
-        console.log("Selected supplier ID:", value);
-        const selectedSupplier = suppliers.find(s => parseInt(s.supplyId, 10) === parseInt(value, 10));
-
-        console.log("Selected supplier:", selectedSupplier);
+        const selectedSupplier = suppliers.find(s => s.supplyId === parseInt(selectedSupplyId, 10));
 
         if (selectedSupplier) {
-            let productsArray = [];
             try {
-                // Ensure products exist before attempting to parse
-                if (selectedSupplier.products) {
-                    console.log("Raw products data:", selectedSupplier.products);
-                    productsArray = Array.isArray(selectedSupplier.products) ?
-                        selectedSupplier.products : JSON.parse(selectedSupplier.products);
-                    console.log("Parsed products array:", productsArray);
+                const response = await axios.get(`http://localhost:5000/api/getrawmaterials/${selectedSupplyId}`);
+                
+                if (Array.isArray(response.data)) {
+                    const fetchedItems = response.data.map(item => ({
+                        id: item.matId,
+                        name: item.matName,
+                    }));
+                    
+                    setItems(fetchedItems);
+                    
+                    // Set matId to preselected value if it exists
+                    setDelivery(prevState => ({
+                        ...prevState,
+                        matId: preselectedMatId || '', // Set matId only if preselectedMatId is provided
+                    }));
                 } else {
-                    console.warn("No products found for selected supplier."); // Handle case when no products are available
+                    setItems([]);
                 }
             } catch (error) {
-                console.error('Error parsing products:', error);
-                console.log("Products data that caused the error:", selectedSupplier.products);
+                console.error('Error fetching raw materials:', error);
+                setItems([]);
             }
-            setDelivery(prevState => ({
-                ...prevState,
-                supplyId: selectedSupplier.supplyId,
-                itemName: '',
-            }));
-            setItems(productsArray);
         } else {
             setItems([]);
-            console.log("No supplier found for ID:", value);
         }
     };
 
     const handleChange = (event) => {
         const { name, value } = event.target;
-        console.log(`Changing ${name} to ${value}`); // Log changes to inputs
         setDelivery(prevState => ({
             ...prevState,
             [name]: value,
@@ -92,95 +83,89 @@ function UpdateSupplyDeliveryModal({ isOpen, onClose, suppliers, items, setItems
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-        console.log("Submitting delivery update with data:", delivery); // Log the data being submitted
         try {
             await axios.put(`http://localhost:5000/api/updatesupplydelivery/${deliveryId}`, delivery);
             onUpdate(); // Callback to refresh the data
-            onClose();  // Close the modal
+            onClose();  // Close the 
+            toast.success("Supply delivery updated successfully!"); // Show sucmodalcess toast
         } catch (error) {
             console.error('Error updating supply delivery:', error);
+            toast.error("Error updating supply delivery. Please try again."); // Show error toast
         }
     };
-
+    //the edit is not displaying rigght when a new item is being edit    
     if (!isOpen) return null;
 
     return (
-            <div id="addModal" className="modal-overlay">
-                <div className="modal-content">
-                    <span className="close" onClick={onClose}>&times;</span>
-                    <h2>Update Supply Delivery</h2>
-                    <form onSubmit={handleSubmit} id='updateForm'>
-                        <div className='form-group'>
-                            <label>Supplier Name:</label>
-                            <select
-                                name="supplyId"
-                                required
-                                value={delivery.supplyId}
-                                onChange={handleSupplierChange}
-                            >
-                                <option value="">Select a supplier</option>
-                                {suppliers.map((supplier) => (
-                                    <option key={supplier.supplyId} value={supplier.supplyId}>
-                                        {supplier.supplyName}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+        <div id="addModal" className="modal-overlay">
+            <div className="modal-content">
+                <span className="close" onClick={onClose}>&times;</span>
+                <h2>Update Supply Delivery</h2>
+                <form onSubmit={handleSubmit} id='updateForm'>
+                    <div className='form-group'>
+                        <label>Supplier Name:</label>
+                        <select
+                            name="supplyId"
+                            required
+                            value={delivery.supplyId}
+                            onChange={(e) => handleSupplierChange(e)}
+                        >
+                            <option value="">Select a supplier</option>
+                            {suppliers.map((supplier) => (
+                                <option key={supplier.supplyId} value={supplier.supplyId}>
+                                    {supplier.supplyName}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
-                        <div className='form-group'>
-                            <label>Item Name:</label>
-                            <select
-                                name="itemName"
-                                required
-                                value={delivery.itemName}
-                                onChange={handleChange}
-                            >
-                                {items.map((item, index) => (
-                                    <option key={index} value={item.itemName}>{item.itemName}</option> 
-                                ))}
-                            </select>
-                        </div>
+                    <div className='form-group'>
+                        <label>Item Name:</label>
+                        <select
+                            name="matId"
+                            required
+                            value={delivery.matId}
+                            onChange={handleChange}
+                        >
+                            <option value="">Select an item</option>
+                            {items.map((item) => (
+                                <option key={item.id} value={item.id}>
+                                    {item.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
-                        <div className='form-group'>
-                            <label>Quantity:</label>
-                            <input
-                                type="number"
-                                name="quantity"
-                                required
-                                value={delivery.quantity}
-                                onChange={handleChange}
-                            />
-                        </div>
+                    <div className='form-group'>
+                        <label>Quantity:</label>
+                        <input
+                            type="number"
+                            name="quantity"
+                            required
+                            value={delivery.quantity}
+                            onChange={handleChange}
+                        />
+                    </div>
 
-                        <div className='form-group'>
-                            <label>Cost:</label>
-                            <input
-                                type="number"
-                                name="cost"
-                                required
-                                value={delivery.cost}
-                                onChange={handleChange}
-                            />
-                        </div>
+                    <div className='form-group'>
+                        <label>Cost:</label>
+                        <input
+                            type="number"
+                            name="cost"
+                            required
+                            value={delivery.cost}
+                            onChange={handleChange}
+                        />
+                    </div>
 
-                        <div className='form-group'>
-                            <label>Date:</label>
-                            <input
-                                type="date"
-                                name="date"
-                                value={delivery.date}
-                                readOnly
-                            />
-                        </div>
-
-                        <button className="btn" type="submit">Update</button>
-                    </form>
-                </div>
+                    <button className="btn" type="submit">Update</button>
+                </form>
             </div>
-        )
+
+            {/* ToastContainer to display toasts */}
+            <ToastContainer position="top-right" autoClose={3000} />
+        </div>
+    );
 }
 
 export default UpdateSupplyDeliveryModal;
-
-
-// the items is not showing right

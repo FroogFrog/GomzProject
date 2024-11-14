@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { toast } from 'react-toastify'; // Import toast
 import '../css/AddItemModal.css'; // You can style your modal here
 
 const AddSupplyDeliveryModal = ({ isOpen, onClose, suppliers, onAdd }) => {
@@ -64,14 +65,15 @@ const AddSupplyDeliveryModal = ({ isOpen, onClose, suppliers, onAdd }) => {
             date 
         };
 
-        
-        // Make POST request to add supply delivery
         try {
+            // Make POST request to add supply delivery
             await axios.post('http://localhost:5000/api/addsupplydelivery', newSupplyDelivery);
+            toast.success('Supply delivery added successfully!'); // Success toast
             onAdd(); // Refresh data after adding
             onClose(); // Close modal after successful add
         } catch (error) {
             console.error('Error adding supply delivery:', error);
+            toast.error('Failed to add supply delivery!'); // Error toast
         }
     };
 

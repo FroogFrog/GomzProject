@@ -78,6 +78,35 @@ th, td {
     border: 1px solid #ddd; /* Border around cells */
 }
 
+.modal-table thead{
+  color: white;
+  background-color: #FF2828; /* REDORANGE */
+  width: 100%;
+  text-align: left;
+  padding: 5px;
+  margin-top: 0px;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 12px;
+}
+
+.modal-table tbody{
+    color: black;
+    width: 100%;
+    border-collapse: collapse;
+    overflow-y: auto; /* Enable vertical scrolling */
+    background-color: white;
+}
+/* Remove any hover effects from the table */
+.modal-table td:hover, 
+.modal-table th:hover {
+    background-color: transparent; /* Ensure no background change on hover */
+}
+
+/* Optional: if you have any hover styles in specific parts of your table */
+.modal-table tr:hover {
+    background-color: transparent; /* Ensure no background change on row hover */
+}
+
 th {
     background-color: #f2f2f2; /* Light gray background for header */
     font-weight: bold; /* Bold header text */
@@ -87,9 +116,6 @@ tr:nth-child(even) {
     background-color: #f9f9f9; /* Light background for even rows */
 }
 
-tr:hover {
-    background-color: #f1f1f1; /* Highlight row on hover */
-}
 
 /* Media Queries for Responsiveness */
 @media (max-width: 768px) {

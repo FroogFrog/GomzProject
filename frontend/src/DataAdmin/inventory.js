@@ -3,34 +3,91 @@ import '../css/style.css';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '../BG/DataAdminHeader';
-import Sidebar from '../BG/DataAdminSidebar';
+import Sidebar from '../BG/DataAdminSidebar';     
+import { ToastContainer, toast } from 'react-toastify'; // Import toastify
 import '@fortawesome/fontawesome-free/css/all.min.css';
+import 'react-toastify/dist/ReactToastify.css'; // Import toast styles
 
 function Inventory() {
-    const [item, setItems] = useState([]);
-const navigate = useNavigate();
+    const [item, setItem] = useState([]);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortedItems, setSortedItems] = useState([]);
+    const [sortConfig, setSortConfig] = useState({ key: 'itemName', direction: 'asc' });
 
-const fetchData = async () => {
-    try {
-        const response = await axios.get('http://localhost:5000/api/combined-data');
-        setItems(response.data);
-    } catch (error) {
-        console.error('Error fetching combined data:', error);
-    }
-};
+    const fetchData = async () => {
+        try {
+            const response = await fetch('http://localhost:5000/api/item');
+            const data = await response.json();
+            setItem(data);
+            setSortedItems(data); // Initially set the sortedItems to all items
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        }
+    };
 
-const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    const year = date.getFullYear();
-    return `${month}-${day}-${year}`;
-};
+    useEffect(() => {
+        fetchData();
+    }, []);
 
-useEffect(() => {
-    fetchData();
-}, []);
+    // Handle search functionality
+    const handleSearch = (e) => {
+        setSearchQuery(e.target.value);
+    };
 
+    // Filter the items based on the search query
+    const filteredItems = sortedItems.filter((item) =>
+        item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    // Handle sorting functionality
+    const handleSort = (key) => {
+        const newDirection = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+        const sortedData = [...filteredItems].sort((a, b) => {
+            if (a[key] < b[key]) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (a[key] > b[key]) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+        setSortedItems(sortedData);
+        setSortConfig({ key, direction: newDirection });
+    };
+
+    // Add Item (with Toast)
+    const addItem = async (newItem) => {
+        try {
+            await axios.post('http://localhost:5000/api/additem', newItem);
+            fetchData();
+            toast.success('Item added successfully!'); // Show success toast
+        } catch (error) {
+            console.error('Error adding item:', error);
+            toast.error('Failed to add item'); // Show error toast
+        }
+    };
+
+    // Update Item (with Toast)
+    const updateItem = async (updatedItem) => {
+        try {
+            await axios.put(`http://localhost:5000/api/item/${updatedItem.itemId}`, updatedItem);
+            fetchData();
+            toast.success('Item updated successfully!'); // Show success toast
+        } catch (error) {
+            console.error('Error updating item:', error);
+            toast.error('Failed to update item'); // Show error toast
+        }
+    };
+
+    // Delete Item (with Toast)
+    const deleteItem = async (id) => {
+        try {
+            await axios.delete(`http://localhost:5000/api/deleteitem/${id}`);
+            fetchData();
+            toast.success('Item deleted successfully!'); // Show success toast
+        } catch (error) {
+            console.error('Error deleting item:', error);
+            toast.error('Failed to delete item'); // Show error toast
+        }
+    };
 
     return (
         <div className="container">
@@ -40,11 +97,6 @@ useEffect(() => {
                 <div className="page-title">Products</div>
                 <div className="info">
                     <div className="above-table">
-                        <div className="above-table-wrapper">
-                            <button className="btn" id="sortButton">
-                                <i className="fa-solid fa-sort"></i> Sort
-                            </button>
-                        </div>
                         <div className="search-container">
                             <div className="search-wrapper">
                                 <label>
@@ -53,12 +105,11 @@ useEffect(() => {
                                 <input
                                     type="text"
                                     className="search-input"
-                                    placeholder="Search..."
+                                    placeholder="Search by name, category or description..."
+                                    value={searchQuery}
+                                    onChange={handleSearch}
                                     size="40"
                                 />
-                            </div>
-                            <div>
-                                <button id="searchButton" className="btn">Search</button>
                             </div>
                         </div>
                     </div>
@@ -67,12 +118,11 @@ useEffect(() => {
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Item Name</th>
-                                    <th>Quantity</th>
-                                    <th>Date</th>
-                                    <th>Staff</th>
-                                    <th>Status</th>
-                                    <th>Last Updated</th>
+                                    <th onClick={() => handleSort('itemName')}>Item Name</th>
+                                    <th onClick={() => handleSort('price')}>Price</th>
+                                    <th onClick={() => handleSort('category')}>Category</th>
+                                    <th onClick={() => handleSort('quantity')}>Quantity</th>
+                                    <th>Description</th>
                                 </tr>
                             </thead>
                         </table>
@@ -80,28 +130,24 @@ useEffect(() => {
                     <div className="table-list">
                         <table>
                             <tbody>
-                                {item.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="8" style={{ textAlign: 'center' }}>No items found.</td>
+                                {filteredItems.map((item, index) => (
+                                    <tr key={item.itemId}>
+                                        <td>{index + 1}</td>
+                                        <td>{item.itemName}</td>
+                                        <td>₱{item.price}</td>
+                                        <td>{item.category}</td>
+                                        <td>{item.quantity}</td>
+                                        <td>{item.description}</td>
                                     </tr>
-                                ) : (
-                                    item.map((item, index) => (
-                                        <tr key={item.productionId}>
-                                            <td>{index + 1}</td>
-                                            <td>{item.itemName}</td>
-                                            <td>{item.quantity}</td>
-                                            <td>{formatDate(item.date)}</td>
-                                            <td>{item.staff}</td>
-                                            <td>{item.status}</td>
-                                            <td>{formatDate(item.lastUpdated)}</td>
-                                        </tr>
-                                    ))
-                                )}
+                                ))}
                             </tbody>
-                        </table>
+                        </table>     
                     </div>
                 </div>
             </div>
+
+            {/* ToastContainer for Notifications */}
+            <ToastContainer position="top-right" autoClose={3000} />
         </div>
     );
 }
