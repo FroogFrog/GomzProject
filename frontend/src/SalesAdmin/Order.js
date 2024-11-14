@@ -117,9 +117,6 @@ function Order() {
                             <button className="btn" onClick={() => setAddModalOpen(true)}>
                                 <i className="fa-solid fa-add"></i> Add
                             </button>
-                            <button className="btn" id="sortButton">
-                                <i className="fa-solid fa-sort"></i> Sort
-                            </button>
                         </div>
                         <div className="search-container">
                             <div className="search-wrapper">
@@ -132,9 +129,6 @@ function Order() {
                                     placeholder="Search..."
                                     size="40"
                                 />
-                            </div>
-                            <div>
-                                <button id="searchButton" className="btn">Search</button>
                             </div>
                         </div>
                     </div>
@@ -167,9 +161,11 @@ function Order() {
                                     paginatedOrders.map((order, index) => {
                                         const itemNames = order.itemNames ? order.itemNames.split(', ') : [];
                                         const itemQuantities = order.quantities ? order.quantities.split(', ') : [];
+                                        const batch = order.quantities ? order.quantities.split(', ') : [];
                                         const itemsArray = itemNames.map((name, i) => ({
                                             itemName: name,
                                             quantity: itemQuantities[i] || 'Unknown quantity',
+                                            batch: batch,
                                         }));
 
                                         return (
@@ -186,7 +182,7 @@ function Order() {
                                                         <ul>
                                                             {itemsArray.map((item, i) => (
                                                                 <li key={i}>
-                                                                    {item.itemName} ({item.quantity})
+                                                                    {item.itemName} - Batch#{item.batch} ({item.quantity})
                                                                 </li>
                                                             ))}
                                                         </ul>
@@ -196,9 +192,6 @@ function Order() {
                                                 </td>
                                                 <td>₱{order.price}</td>
                                                 <td className="button-container">
-                                                    <button className="done-btn" onClick={() => handleEditOrder(order)}>
-                                                        <i className="fa-solid fa-check"></i>
-                                                    </button>
                                                     <button className="edit-btn" onClick={() => handleEditOrder(order)}>
                                                         <i className="fa-solid fa-edit"></i>
                                                     </button>

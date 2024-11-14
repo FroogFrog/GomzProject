@@ -10,8 +10,10 @@ const AddOrderModal = ({ isOpen, onClose, onAdd }) => {
     const [quantity, setQuantity] = useState('');
     const [orderProducts, setOrderProducts] = useState([]);
     const [items, setItems] = useState([]);
+    const [inventory, setInventory] = useState([]);
     const [selectedItemId, setSelectedItemId] = useState('');
     const [selectedItemPrice, setSelectedItemPrice] = useState(0);
+    const [selectedBatch, setSelectedBatch] = useState('');
     const [total, setTotal] = useState(0);
 
     useEffect(() => {
@@ -27,6 +29,22 @@ const AddOrderModal = ({ isOpen, onClose, onAdd }) => {
             fetchItems();
         }
     }, [isOpen]);
+
+    useEffect(() => {
+        if (selectedItemId) {
+            // Fetch inventory data for the selected item
+            const fetchInventory = async () => {
+                try {
+                    const response = await axios.get(`http://localhost:5000/api/inventory-by-items/${selectedItemId}`);
+                    setInventory(response.data); // Assuming response contains batch data
+                    setSelectedBatch(''); // Reset batch when item changes
+                } catch (error) {
+                    console.error('Error fetching inventory data:', error);
+                }
+            };
+            fetchInventory();
+        }
+    }, [selectedItemId]);
 
     useEffect(() => {
         const selectedItem = items.find(item => item.itemId.toString() === selectedItemId);
@@ -45,23 +63,27 @@ const AddOrderModal = ({ isOpen, onClose, onAdd }) => {
     if (!isOpen) return null;
 
     const addProductToOrder = () => {
-        if (selectedItemId && quantity > 0) {
+        if (selectedItemId && quantity > 0 && selectedBatch) {
             const selectedItemIdNumber = Number(selectedItemId);
-            if (!orderProducts.some(item => item.itemId === selectedItemIdNumber)) {
+            // Check if the product with the same itemId and batch already exists in the order
+            if (!orderProducts.some(item => item.itemId === selectedItemIdNumber && item.batch === selectedBatch)) {
                 const product = {
-                    itemId: selectedItemIdNumber, 
+                    itemId: selectedItemIdNumber,
                     quantity: quantity,
+                    batch: selectedBatch,
                 };
                 setOrderProducts(prev => [...prev, product]);
-                setQuantity(''); 
+                setQuantity('');
                 setSelectedItemId('');
+                setSelectedBatch('');
             } else {
-                alert('This product has already been added.');
+                alert('This product with the selected batch has already been added.');
             }
         } else {
-            alert('Please select a product and enter a quantity.');
+            alert('Please select a product, batch, and enter a quantity.');
         }
     };
+    
 
     const removeProductFromOrder = (productId) => {
         const updatedProducts = orderProducts.filter(product => product.itemId !== productId);
@@ -88,11 +110,8 @@ const AddOrderModal = ({ isOpen, onClose, onAdd }) => {
             orderId: null, // Order ID will be generated in the backend
             itemId: product.itemId,
             quantity: product.quantity,
+            batch: product.batch,
         }));
-
-        // Log data to check for undefined values
-        console.log('Order Data:', newOrder);
-        console.log('Order Products Data:', orderProductsData);
 
         await onAdd(newOrder, orderProductsData);  // Pass both new order and order products to the parent method
 
@@ -152,12 +171,29 @@ const AddOrderModal = ({ isOpen, onClose, onAdd }) => {
                                 </option>
                             ))}
                         </select>
+                        {selectedItemId && (
+                            <>
+                                <select
+                                    value={selectedBatch}
+                                    onChange={(e) => setSelectedBatch(e.target.value)}
+                                    required
+                                >
+                                    <option value="">Select Batch</option>
+                                    {inventory.map(batch => (
+                                        <option key={batch.inventoryId} value={batch.inventoryId}>
+                                            Batch#{batch.inventoryId} - Quantity: {batch.quantity}
+                                        </option>
+                                    ))}
+                                </select>
+                            </>
+                        )}
                         <input
                             type="number"
                             value={quantity}
                             onChange={(e) => setQuantity(e.target.value)}
                             placeholder="Quantity"
                             required
+                            max={inventory.find(batch => batch.inventoryId === selectedBatch)?.quantity || 0}
                         />
                         <button type="button" onClick={addProductToOrder}>
                             Add Product
@@ -174,7 +210,7 @@ const AddOrderModal = ({ isOpen, onClose, onAdd }) => {
                                     const item = items.find(i => i.itemId === product.itemId);
                                     return (
                                         <li key={index}>
-                                            {item ? item.itemName : 'Product not found'} - {product.quantity} x ₱{item.price.toFixed(2)}
+                                            {item ? item.itemName : 'Product not found'} - Batch#{product.batch}  ({product.quantity}) x ₱{item.price.toFixed(2)}
                                             <button
                                                 type="button"
                                                 onClick={() => removeProductFromOrder(product.itemId)}

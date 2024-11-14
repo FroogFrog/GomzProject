@@ -113,6 +113,8 @@ app.put('/api/updateitem/:id', (req, res) => {
     });
 });
 
+
+
 //deleting item in inventory
 app.delete('/api/deleteitem/:id', (req, res) => {
     const { id } = req.params;
@@ -145,6 +147,34 @@ app.get('/api/inventory/:itemId', (req, res) => {
         res.json(result);
     });
 });
+
+// Get inventory details from tblInventory by itemId, joining with tblProduction
+app.get('/api/inventory-by-items/:itemId', (req, res) => {
+    const itemId = req.params.itemId;
+    const sql = `
+       SELECT 
+            tblinventory.inventoryId,
+            tblinventory.quantity,
+            tblproduction.productionDate,
+            tblinventory.lastUpdated
+        FROM tblinventory
+        JOIN tblproduction ON tblinventory.productionId = tblproduction.productionId
+        WHERE tblproduction.itemId = ?
+          AND tblinventory.quantity != 0
+    `;
+
+    db.query(sql, [itemId], (err, result) => {
+        if (err) {
+            return res.status(500).json({ error: 'Database error: ' + err.message });
+        }
+        if (result.length === 0) {
+            return res.status(404).json({ error: 'No inventory found for this item' });
+        }
+        res.json(result);
+    });
+});
+
+
 
 //get info
 // app.get('/api/inventory-by-item/:itemId', (req, res) => {
@@ -197,7 +227,9 @@ app.get('/api/rawmatsinv/:matId', (req, res) => {
             tblrawmatsinv.lastUpdated
         FROM tblrawmatsinv
         JOIN tblsupdeli ON tblrawmatsinv.supDeliId = tblsupdeli.supDeliId
-        WHERE tblsupdeli.matId = ?
+        WHERE tblsupdeli.matId = ? 
+        AND tblrawmatsinv.quantity != 0;
+
     `;
 
     db.query(query, [matId], (error, results) => {
@@ -1346,7 +1378,8 @@ app.get('/api/orders', (req, res) => {
             o.status, 
             o.price, 
             GROUP_CONCAT(i.itemName SEPARATOR ', ') AS itemNames,
-            GROUP_CONCAT(op.quantity SEPARATOR ', ') AS quantities
+            GROUP_CONCAT(op.quantity SEPARATOR ', ') AS quantities,
+            GROUP_CONCAT(op.inventoryId SEPARATOR ', ') AS inventoryId
         FROM 
             tblorders AS o
         LEFT JOIN 
@@ -1387,59 +1420,61 @@ app.post('/api/orders', (req, res) => {
       
     // Check if orderProducts is an array
     if (!Array.isArray(orderProducts)) {
-      return res.status(400).send('orderProducts must be an array');
+        return res.status(400).send('orderProducts must be an array');
     }
   
     // 1. Insert the order into tblorders
     const orderQuery = `
-      INSERT INTO tblorders (customerName, date, price, status, lastUpdateDate, location, paymentStatus, modeOfPayment)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO tblorders (customerName, date, price, status, lastUpdateDate, location, paymentStatus, modeOfPayment)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
     
     const orderData = [
-      customerName,
-      date,
-      price,
-      status,
-      lastUpdateDate,
-      location,
-      paymentStatus,
-      modeOfPayment,
+        customerName,
+        date,
+        price,
+        status,
+        lastUpdateDate,
+        location,
+        paymentStatus,
+        modeOfPayment,
     ];
   
     db.query(orderQuery, orderData, (err, result) => {
-      if (err) {
-        console.error('Error inserting order:', err);
-        return res.status(500).send('Error inserting order');
-      }
-  
-      // Get the orderId (this will be the ID of the newly inserted order)
-      const orderId = result.insertId;
-  
-      // 2. Insert each product into tblorderproducts
-      const orderProductsQuery = `
-        INSERT INTO tblorderproducts (orderId, itemId, quantity)
-        VALUES ?
-      `;
-      
-      const orderProductsData = orderProducts.map(product => [
-        orderId, // The orderId we just inserted
-        product.itemId,
-        product.quantity
-      ]);
-  
-      // Insert the order products into the database
-      db.query(orderProductsQuery, [orderProductsData], (err, result) => {
         if (err) {
-          console.error('Error inserting order products:', err);
-          return res.status(500).send('Error inserting order products');
+            console.error('Error inserting order:', err);
+            return res.status(500).send('Error inserting order');
         }
   
-        // Success response
-        res.status(201).send({ message: 'Order added successfully' });
-      });
+        // Get the orderId of the newly inserted order
+        const orderId = result.insertId;
+  
+        // 2. Insert each product with inventoryId into tblorderproducts
+        const orderProductsQuery = `
+            INSERT INTO tblorderproducts (orderId, itemId, quantity, inventoryId)
+            VALUES ?
+        `;
+        
+        const orderProductsData = orderProducts.map(product => [
+            orderId,        // The orderId we just inserted
+            product.itemId, // Product itemId
+            product.quantity, // Product quantity
+            product.batch,  // Product batch (corresponding to inventoryId)
+        ]);
+  
+        // Insert the order products into the database
+        db.query(orderProductsQuery, [orderProductsData], (err, result) => {
+            if (err) {
+                console.error('Error inserting order products:', err);
+                return res.status(500).send('Error inserting order products');
+            }
+  
+            // Success response
+            res.status(201).send({ message: 'Order added successfully' });
+        });
     });
-  });
+});
+
   
 // Route to update an existing order
 app.put('/api/orders/:orderId', (req, res) => {
