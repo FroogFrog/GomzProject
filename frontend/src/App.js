@@ -9,7 +9,7 @@ import SystemAdminDocuments from './SystemAdmin/Document'
 import SystemAdminInventory from './SystemAdmin/inventory'
 import SystemAdminRawMaterials from './SystemAdmin/RawMats';
 import SystemAdminSupplier from './SystemAdmin/Supplier';
-
+import SystemAdminAccountRoles from './SystemAdmin/AccountRoles.js';
 import Tags from './SystemAdmin/CategoryTable';
 
 
@@ -74,7 +74,7 @@ function App() {
           <Route path="/system-admin/inventory" element={<SystemAdminInventory />} />
           <Route path="/system-admin/raw-material" element={<SystemAdminRawMaterials />} />
           <Route path="/system-admin/supplier" element={<SystemAdminSupplier />} />
-
+          <Route path="/system-admin/account" element={<SystemAdminAccountRoles />} />
           <Route path="/system-admin/tags" element={<Tags />} />
 
 
